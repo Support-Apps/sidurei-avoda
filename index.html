@@ -28,7 +28,7 @@ button{font-family:inherit}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
 /* ===== Magazine masthead ===== */
-.masthead{padding:32px 44px 22px;border-bottom:3px double var(--ink);display:flex;justify-content:space-between;align-items:flex-end;gap:24px;background:var(--white);position:relative}
+.masthead{padding:22px 44px 14px;border-bottom:3px double var(--ink);display:flex;justify-content:space-between;align-items:flex-end;gap:24px;background:var(--white);position:relative}
 .masthead .brand{font-family:var(--font-display);font-weight:900;font-size:42px;letter-spacing:6px;text-transform:uppercase;line-height:1}
 .masthead .brand small{display:block;font-family:var(--font-serif);font-size:12px;letter-spacing:8px;color:var(--gold);margin-top:6px;font-weight:400;text-transform:uppercase}
 .masthead .issue{font-family:var(--font-serif);font-size:13px;color:var(--muted);text-align:left;letter-spacing:2px;text-transform:uppercase}
@@ -138,164 +138,6 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
 
 /* Pull-quote magazine style */
 .pull-quote{font-family:var(--font-display);font-style:italic;font-size:20px;color:var(--ink);border-right:3px solid var(--gold);padding:6px 16px;margin:18px 0;background:linear-gradient(to left,transparent,var(--lightgray))}
-
-/* ===== Mobile Responsive ===== */
-/* Desktop view (default) */
-body.desktop-view {
-  font-size: 16px;
-}
-
-body.desktop-view .sidebar {
-  display: flex;
-  width: 380px;
-}
-
-body.desktop-view .app {
-  flex-direction: row;
-}
-
-/* Mobile view */
-body.mobile-view {
-  font-size: 14px;
-}
-
-body.mobile-view .sidebar {
-  display: grid;
-  width: 100%;
-  max-height: 160px;
-  overflow-x: auto;
-  overflow-y: auto;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(200px, 1fr);
-  padding: 12px;
-  gap: 12px;
-}
-
-body.mobile-view .app {
-  flex-direction: column;
-}
-
-body.mobile-view .table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-body.mobile-view table.sched {
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-body.mobile-view table.sched th,
-body.mobile-view table.sched td {
-  padding: 3px 1px;
-}
-
-body.mobile-view .cell {
-  padding: 3px;
-  font-size: 9px;
-  min-height: 28px;
-}
-
-body.mobile-view .masthead {
-  padding: 10px 14px 8px;
-}
-
-body.mobile-view .masthead .brand {
-  font-size: 22px;
-  letter-spacing: 3px;
-}
-
-body.mobile-view .section-title {
-  font-size: 12px;
-}
-
-body.mobile-view .btn {
-  padding: 8px 12px;
-  font-size: 10px;
-}
-
-@media (max-width: 1024px) {
-  body.desktop-view .sidebar {
-    width: 100%;
-    max-height: 160px;
-    overflow-x: auto;
-    overflow-y: auto;
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(200px, 1fr);
-    gap: 12px;
-    padding: 12px;
-  }
-  
-  body.desktop-view .app {
-    flex-direction: column;
-  }
-  
-  body.desktop-view .table-wrap {
-    overflow-x: auto;
-  }
-  
-  body.desktop-view table.sched {
-    font-size: 11px;
-  }
-  
-  body.desktop-view table.sched th,
-  body.desktop-view table.sched td {
-    padding: 4px 2px;
-  }
-}
-
-@media (max-width: 768px) {
-  body.desktop-view .sidebar {
-    width: 100%;
-    max-height: 140px;
-    grid-auto-columns: minmax(160px, 1fr);
-  }
-  
-  body.desktop-view .section-title {
-    font-size: 12px;
-  }
-  
-  body.desktop-view .btn {
-    padding: 8px 12px;
-    font-size: 10px;
-  }
-  
-  body.desktop-view table.sched {
-    font-size: 10px;
-  }
-  
-  body.desktop-view table.sched th,
-  body.desktop-view table.sched td {
-    padding: 3px 1px;
-  }
-}
-
-@media (max-width: 600px) {
-  body.desktop-view .sidebar {
-    display: none;
-  }
-  
-  body.desktop-view .app {
-    flex-direction: column;
-  }
-  
-  body.desktop-view .main {
-    width: 100%;
-  }
-  
-  body.desktop-view .table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  body.desktop-view table.sched {
-    font-size: 9px;
-    width: 100%;
-    white-space: nowrap;
-  }
-}
-
 </style>
 </head>
 <body>
@@ -383,10 +225,7 @@ body.mobile-view .btn {
   <!-- ============= MAIN ============= -->
   <div class="main">
     <header class="masthead">
-      <div style="position:absolute;top:4px;left:50%;transform:translateX(-50%);font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
-      <div style="position:absolute;top:22px;left:44px;width:280px">
-        <button class="btn btn-gold" onclick="toggleViewMode()" style="width:100%;padding:10px 14px;font-size:12px;text-align:right" id="viewToggleBtn">📱 תצוגה לנייד</button>
-      </div>
+      <div style="position:absolute;top:22px;right:120px;font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
       <div class="brand">משמרות<small>ניהול משמרות קל ויעיל</small></div>
       <div class="issue">גליון<b id="issueLabel">—</b></div>
     </header>
@@ -486,21 +325,6 @@ function init(){
   renderAll();
   document.getElementById('newWorkerName').addEventListener('keydown',e=>{if(e.key==='Enter')addWorker()});
   document.getElementById('backupWorkerName').addEventListener('keydown',e=>{if(e.key==='Enter')addBackupWorker()});
-  
-  // Apply view mode on init
-  const savedMode = localStorage.getItem('viewMode');
-  if(!savedMode){
-    // First time - auto-detect
-    applyViewMode(detectDeviceType());
-  } else {
-    applyViewMode(savedMode);
-  }
-  
-  // Listen for window resize
-  window.addEventListener('resize', () => {
-    const currentMode = localStorage.getItem('viewMode') || detectDeviceType();
-    applyViewMode(currentMode);
-  });
 }
 
 function buildScrollPickers(){
@@ -1049,38 +873,6 @@ function editDayNotes(day){
     sched[day] = sched[day] || {};
     sched[day].notes = newNotes;
     renderSchedule(); saveLocal();
-  }
-}
-
-function toggleViewMode(){
-  const currentMode = localStorage.getItem('viewMode') || detectDeviceType();
-  const newMode = currentMode === 'desktop' ? 'mobile' : 'desktop';
-  localStorage.setItem('viewMode', newMode);
-  applyViewMode(newMode);
-}
-
-function detectDeviceType(){
-  // Auto-detect based on screen width
-  return window.innerWidth <= 1024 ? 'mobile' : 'desktop';
-}
-
-function applyViewMode(mode){
-  mode = mode || localStorage.getItem('viewMode') || detectDeviceType();
-  localStorage.setItem('viewMode', mode);
-  
-  const body = document.body;
-  const btn = document.getElementById('viewToggleBtn');
-  
-  // Remove both classes
-  body.classList.remove('desktop-view', 'mobile-view');
-  
-  // Add appropriate class
-  if(mode === 'mobile'){
-    body.classList.add('mobile-view');
-    btn.textContent = '💻 תצוגה למחשב';
-  } else {
-    body.classList.add('desktop-view');
-    btn.textContent = '📱 תצוגה לנייד';
   }
 }
 
