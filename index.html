@@ -191,6 +191,12 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
     </div>
 
     <div>
+      <div class="section-title">משמרת 12 שעות</div>
+      <div style="font-size:11px;color:var(--muted);margin:8px 0;font-family:var(--font-serif);letter-spacing:1px">בחר תאריך בטבלה, ואז לחץ להוסיף משמרת 12 שעות</div>
+      <button class="btn btn-gold" style="width:100%;text-align:right" onclick="openDouble12Modal()" id="double12Btn" disabled>בחר יום ללוח</button>
+    </div>
+
+    <div>
       <div class="section-title">מקרא צבעים</div>
       <div id="legend" class="legend" style="margin-top:10px"></div>
     </div>
@@ -219,8 +225,8 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
   <!-- ============= MAIN ============= -->
   <div class="main">
     <header class="masthead">
-      <div style="position:absolute;top:22px;right:44px;font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
-      <div class="brand">SHIFTS<small>The Operations Edition</small></div>
+      <div style="position:absolute;top:22px;right:120px;font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
+      <div class="brand">משמרות<small>ניהול משמרות קל ויעיל</small></div>
       <div class="issue">גליון<b id="issueLabel">—</b></div>
     </header>
 
@@ -548,6 +554,7 @@ function renderSchedule(){
         <th class="shift-h">בוקר · 07:00–15:00</th>
         <th class="shift-h">צהריים · 15:00–23:00</th>
         <th class="shift-h">לילה · 23:00–07:00</th>
+        <th class="shift-h">הערות</th>
         <th class="shift-h">החלפה</th>
       </tr></thead><tbody>`;
   for(let d=1; d<=dim; d++){
@@ -555,32 +562,31 @@ function renderSchedule(){
     const dayName = DAYS_HE[dateObj.getDay()];
     const isWeek1 = d<=7;
     const day = sched[d] || {};
-    html += `<tr><td class="date-c">${d}/${state.month+1}<small>${dayName}${isWeek1?' · שבוע 1':''}</small></td>`;
+    html += `<tr><td class="date-c" onclick="selectDayForDouble12(${d})" style="cursor:pointer;position:relative" title="לחץ לבחירת משמרת 12 שעות">${d}/${state.month+1}<small>${dayName}${isWeek1?' · שבוע 1':''}</small>${day.double12morning || day.double12night ? '<span style="position:absolute;top:2px;right:2px;font-size:10px;background:var(--gold);color:var(--ink);padding:2px 4px;border-radius:2px">12h</span>' : ''}</td>`;
     
-    // Check if this is a double12 day
-    if(day.double12){
-      html += `<td colspan="3"><div class="cell" style="background:#FFD1E3;font-weight:700;color:var(--ink)"
-        onclick="clearDouble12(${d})">משמרת 12 שעות (בוקר+לילה)</div></td>`;
-    } else {
-      for(const s of SHIFTS){
-        if(s.key === 'double12') continue; // Skip the double12 shift in the loop
-        const wid = day[s.key]; 
-        let w = null;
-        if(wid){
-          if(wid.startsWith('backup_')){
-            const backupId = wid.replace('backup_', '');
-            const backup = branch().backupWorkers.find(b => b.id === backupId);
-            w = {name: backup ? backup.name : 'שוקל חלופי', color: '#E8D9A8'};
-          } else {
-            w = branch().workers.find(x=>x.id===wid);
-          }
+    for(const s of SHIFTS){
+      if(s.key === 'double12') continue;
+      const wid = day[s.key]; 
+      let w = null;
+      if(wid){
+        if(wid.startsWith('backup_')){
+          const backupId = wid.replace('backup_', '');
+          const backup = branch().backupWorkers.find(b => b.id === backupId);
+          w = {name: backup ? backup.name : 'שוקל חלופי', color: '#E8D9A8'};
+        } else {
+          w = branch().workers.find(x=>x.id===wid);
         }
-        const bg = w?w.color:'transparent';
-        html += `<td><div class="cell ${w?'':'empty'}" style="background:${bg}"
-          ondragover="event.preventDefault()" ondrop="dropOn(event,${d},'${s.key}')"
-          onclick="openAssign(${d},'${s.key}')">${w?w.name:'+ שבץ'}</div></td>`;
       }
+      const bg = w?w.color:'transparent';
+      html += `<td><div class="cell ${w?'':'empty'}" style="background:${bg}"
+        ondragover="event.preventDefault()" ondrop="dropOn(event,${d},'${s.key}')"
+        onclick="openAssign(${d},'${s.key}')">${w?w.name:'+ שבץ'}</div></td>`;
     }
+    
+    // Notes column
+    const notes = day.notes || '';
+    html += `<td style="padding:6px;text-align:right;max-width:150px;overflow:hidden;text-overflow:ellipsis"><div style="cursor:pointer;padding:8px;background:var(--lightgray);border-radius:2px;font-size:12px;min-height:38px;display:flex;align-items:center;justify-content:flex-end" onclick="editDayNotes(${d})" title="לחץ לעריכת הערות">${notes || '<span style="color:var(--muted);font-style:italic">+ הערה</span>'}</div></td>`;
+    
     html += `<td style="padding:4px;text-align:center"><button class="btn btn-ghost" style="padding:6px 4px;font-size:11px" onclick="openSwapModal(${d})">⇄</button></td>`;
     html += `</tr>`;
   }
@@ -716,8 +722,11 @@ function countConsecutiveWorkDays(sched, targetDay, wid){
     const day = sched[d] || {};
     let working = false;
     for(const s of SHIFTS){
+      if(s.key === 'double12') continue;
       if(day[s.key] === wid) working = true;
     }
+    // Also check double12 shifts
+    if(day.double12morning === wid || day.double12night === wid) working = true;
     if(!working) break;
     start = d;
   }
@@ -729,8 +738,11 @@ function countConsecutiveWorkDays(sched, targetDay, wid){
     const day = sched[d] || {};
     let working = false;
     for(const s of SHIFTS){
+      if(s.key === 'double12') continue;
       if(day[s.key] === wid) working = true;
     }
+    // Also check double12 shifts
+    if(day.double12morning === wid || day.double12night === wid) working = true;
     if(!working) break;
     end = d;
   }
@@ -805,19 +817,93 @@ function assignBackupWorker(backupId, day, shiftKey){
 
 function switchToDouble12(day){
   closeModal();
-  const sched = branch().schedules[monthKey()];
-  sched[day] = sched[day] || {};
-  sched[day].morning = null;
-  sched[day].afternoon = null;
-  sched[day].night = null;
-  sched[day].double12 = 'double12_marker';
-  renderSchedule(); renderLegend(); saveLocal();
-  toast('משמרת 12 שעות נשבצה ✓');
+  // Show modal to pick morning and night workers
+  document.getElementById('modalTitle').textContent = 'בחר שוקלים למשמרת 12 שעות';
+  document.getElementById('modalSub').textContent = `בוקר 07:00–15:00 ולילה 23:00–07:00`;
+  
+  let html = `<div style="margin-bottom:16px">
+    <div style="font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🌅 בוקר 12 שעות (07:00–15:00)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
+  
+  branch().workers.forEach(w => {
+    html += `<button class="btn btn-gold" style="text-align:right;font-size:12px" onclick="selectDouble12Worker(${day},'double12morning','${w.id}')">${w.name}</button>`;
+  });
+  
+  html += `</div></div>`;
+  
+  html += `<div>
+    <div style="font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🌙 לילה 12 שעות (23:00–07:00)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
+  
+  branch().workers.forEach(w => {
+    html += `<button class="btn btn-gold" style="text-align:right;font-size:12px" onclick="selectDouble12Worker(${day},'double12night','${w.id}')">${w.name}</button>`;
+  });
+  
+  html += `</div></div>`;
+  html += `<div style="margin-top:12px"><button class="btn btn-ghost" style="width:100%;text-align:right" onclick="closeModal()">ביטול</button></div>`;
+  
+  document.getElementById('modalOpts').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+  window.double12Day = day;
 }
 
-function clearDouble12(day){
+function selectDayForDouble12(day){
+  window.selectedDouble12Day = day;
+  document.getElementById('double12Btn').disabled = false;
+  document.getElementById('double12Btn').textContent = `שבץ משמרת 12 שעות ל-${day}/${state.month+1}`;
+  document.getElementById('double12Btn').onclick = () => switchToDouble12(day);
+  toast(`בחרת יום ${day}/${state.month+1}`);
+}
+
+function openDouble12Modal(){
+  if(!window.selectedDouble12Day){
+    toast('בחר תאריך בטבלה תחילה');
+    return;
+  }
+  switchToDouble12(window.selectedDouble12Day);
+}
+
+function editDayNotes(day){
+  const sched = branch().schedules[monthKey()] || {};
+  const dayData = sched[day] || {};
+  const currentNotes = dayData.notes || '';
+  
+  const newNotes = prompt(`הערות ליום ${day}/${state.month+1}:`, currentNotes);
+  if(newNotes !== null){
+    sched[day] = sched[day] || {};
+    sched[day].notes = newNotes;
+    renderSchedule(); saveLocal();
+  }
+}
+
+function selectDouble12Worker(day, shiftType, wid){
   const sched = branch().schedules[monthKey()];
-  if(sched[day]) sched[day].double12 = null;
+  sched[day] = sched[day] || {};
+  sched[day][shiftType] = wid;
+  
+  // Check if both are filled
+  if(sched[day].double12morning && sched[day].double12night){
+    closeModal();
+    renderSchedule(); renderLegend(); saveLocal();
+    toast('משמרת 12 שעות נשבצה ✓');
+    document.getElementById('double12Btn').textContent = 'בחר יום ללוח';
+    document.getElementById('double12Btn').disabled = true;
+    window.selectedDouble12Day = null;
+  } else {
+    toast('בחר שוקל ללילה גם');
+  }
+}
+
+function clearDouble12(day, shiftType){
+  const sched = branch().schedules[monthKey()];
+  if(sched[day]){
+    if(shiftType){
+      sched[day][shiftType] = null;
+    } else {
+      sched[day].double12morning = null;
+      sched[day].double12night = null;
+    }
+  }
   renderSchedule(); renderLegend(); saveLocal();
 }
 
@@ -998,7 +1084,7 @@ function exportExcel(){
   if(tab.type==='schedule'){
     const dim = daysInMonth();
     const sched = branch().schedules[monthKey()] || {};
-    const rows = [['תאריך','יום','בוקר 07-15','צהריים 15-23','לילה 23-07']];
+    const rows = [['תאריך','יום','בוקר 07-15','צהריים 15-23','לילה 23-07','הערות','12h בוקר','12h לילה']];
     for(let d=1; d<=dim; d++){
       const day = sched[d] || {};
       const nm = id => {
@@ -1010,10 +1096,16 @@ function exportExcel(){
         return branch().workers.find(w=>w.id===id)?.name||'';
       };
       const dow = DAYS_HE[new Date(state.year,state.month,d).getDay()];
-      const morning = day.double12 ? 'משמרת 12 שעות' : nm(day.morning);
-      const afternoon = day.double12 ? '' : nm(day.afternoon);
-      const night = day.double12 ? '' : nm(day.night);
-      rows.push([`${d}/${state.month+1}/${state.year}`, dow, morning, afternoon, night]);
+      rows.push([
+        `${d}/${state.month+1}/${state.year}`, 
+        dow, 
+        nm(day.morning), 
+        nm(day.afternoon), 
+        nm(day.night),
+        day.notes || '',
+        nm(day.double12morning),
+        nm(day.double12night)
+      ]);
     }
     const ws = XLSX.utils.aoa_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws, `סידור ${MONTHS_HE[state.month]}`);
@@ -1045,8 +1137,8 @@ function buildTextSummary(){
         }
         return branch().workers.find(w=>w.id===id)?.name||'-';
       };
-      if(day.double12){
-        txt += `\n${d}/${state.month+1}: 🔁 משמרת 12 שעות`;
+      if(day.double12morning || day.double12night){
+        txt += `\n${d}/${state.month+1}: 🌅${nm(day.double12morning)} 🌙${nm(day.double12night)}`;
       } else {
         txt += `\n${d}/${state.month+1}: 🌅${nm(day.morning)} ☀️${nm(day.afternoon)} 🌙${nm(day.night)}`;
       }
