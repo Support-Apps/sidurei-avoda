@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מנהל סידורי עבודה — Shift Scheduler</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Cormorant+Garamond:wght@400;600;700&family=Frank+Ruhl+Libre:wght@300;400;500;700;900&family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#FFFFFF; --ink:#1C1C1A; --gold:#C9A84C; --gold-soft:#E8D9A8;
+  --border:#E5E5E2; --white:#FFFDF9; --lightgray:#F5F5F3; --muted:#8a8a85;
+  --font-display:'Playfair Display','Frank Ruhl Libre',serif;
+  --font-serif:'Frank Ruhl Libre','Cormorant Garamond',serif;
+  --font-body:'Heebo',sans-serif;
+  --p-pink:#FFD1E3; --p-blue:#C9E4F2; --p-green:#D4EBC2; --p-yellow:#FFF4B8;
+  --p-lavender:#E6D5E8; --p-peach:#FFD9B8; --p-cyan:#BEEDED; --p-rose:#F2DAE0;
+  --p-mint:#CCEBD6; --p-sand:#F0E0C9;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font-body);background:var(--white);color:var(--ink);direction:rtl;overflow:hidden}
+button{font-family:inherit}
+
+/* ===== Layout ===== */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:380px;background:var(--white);border-left:1px solid var(--border);padding:28px;display:flex;flex-direction:column;gap:18px;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ===== Magazine masthead ===== */
+.masthead{padding:22px 44px 14px;border-bottom:3px double var(--ink);display:flex;justify-content:space-between;align-items:flex-end;gap:24px;background:var(--white);position:relative}
+.masthead .brand{font-family:var(--font-display);font-weight:900;font-size:42px;letter-spacing:6px;text-transform:uppercase;line-height:1}
+.masthead .brand small{display:block;font-family:var(--font-serif);font-size:12px;letter-spacing:8px;color:var(--gold);margin-top:6px;font-weight:400;text-transform:uppercase}
+.masthead .issue{font-family:var(--font-serif);font-size:13px;color:var(--muted);text-align:left;letter-spacing:2px;text-transform:uppercase}
+.masthead .issue b{display:block;font-size:22px;color:var(--ink);letter-spacing:3px;font-weight:700;margin-top:4px}
+
+/* ===== Tabs ===== */
+.tabs{display:flex;align-items:center;gap:0;padding:0 36px;border-bottom:1px solid var(--border);background:var(--white);overflow-x:auto;scrollbar-width:thin}
+.tabs::-webkit-scrollbar{height:4px}
+.tab{padding:16px 22px;cursor:pointer;border-bottom:3px solid transparent;font-family:var(--font-serif);font-size:15px;font-weight:500;letter-spacing:1px;white-space:nowrap;color:var(--ink);transition:.2s;position:relative}
+.tab:hover{color:var(--gold)}
+.tab.active{border-bottom-color:var(--gold);color:var(--gold);font-weight:700}
+.tab .x{margin-right:8px;opacity:0;color:var(--muted);font-size:11px}
+.tab:hover .x{opacity:1}
+.tab-add{padding:14px 18px;cursor:pointer;color:var(--gold);font-size:20px;font-weight:300;border:none;background:none}
+
+/* ===== Content ===== */
+.content{flex:1;overflow-y:auto;padding:30px 44px 80px;display:none}
+.content.active{display:block}
+
+/* ===== Sidebar UI ===== */
+.section-title{font-family:var(--font-serif);font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);border-bottom:1px solid var(--border);padding-bottom:8px;font-weight:700}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field input, .field select, .field textarea{padding:11px 12px;border:1px solid var(--border);background:var(--white);font-family:var(--font-body);font-size:14px;outline:none;direction:rtl;transition:.2s;border-radius:2px}
+.field input:focus, .field select:focus, .field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12)}
+
+.btn{padding:13px 20px;border:none;cursor:pointer;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;transition:.25s;border-radius:2px;font-family:var(--font-body)}
+.btn-primary{background:var(--ink);color:var(--white)}
+.btn-primary:hover{background:var(--gold);color:var(--ink)}
+.btn-gold{background:var(--gold);color:var(--ink)}
+.btn-gold:hover{background:var(--ink);color:var(--gold)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn-row .btn{flex:1;min-width:120px}
+
+/* ===== Scrollable date/list pickers ===== */
+.scroll-picker{display:flex;gap:8px;background:var(--lightgray);padding:10px;border-radius:4px;border:1px solid var(--border)}
+.scroll-col{flex:1;display:flex;flex-direction:column;align-items:center}
+.scroll-col .cap{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;font-weight:700}
+.scroll-list{height:140px;width:100%;overflow-y:scroll;scroll-snap-type:y mandatory;border:1px solid var(--border);background:var(--white);border-radius:3px;scrollbar-width:thin;scrollbar-color:var(--gold) transparent}
+.scroll-list::-webkit-scrollbar{width:5px}
+.scroll-list::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px}
+.scroll-list .opt{padding:10px 6px;text-align:center;cursor:pointer;scroll-snap-align:center;font-family:var(--font-serif);font-size:15px;border-bottom:1px solid var(--lightgray);transition:.15s}
+.scroll-list .opt:hover{background:var(--lightgray)}
+.scroll-list .opt.sel{background:var(--gold);color:var(--white);font-weight:700}
+
+/* ===== Workers list ===== */
+.workers-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;border:1px solid var(--border);padding:8px;border-radius:3px;background:var(--lightgray)}
+.worker-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--white);border-radius:3px;border:1px solid var(--border);cursor:grab;font-size:13px;transition:.15s}
+.worker-chip:hover{border-color:var(--gold);transform:translateX(-2px)}
+.worker-chip .dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.1);flex-shrink:0}
+.worker-chip .name{flex:1;font-family:var(--font-serif);font-size:14px}
+.worker-chip .edit, .worker-chip .del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;padding:2px 4px}
+.worker-chip .edit:hover{color:var(--gold)} .worker-chip .del:hover{color:#c0392b}
+
+/* ===== Color legend ===== */
+.legend{display:grid;grid-template-columns:1fr;gap:6px;padding:12px;background:var(--lightgray);border-radius:4px;max-height:280px;overflow-y:auto}
+.legend-item{display:flex;align-items:center;gap:10px;padding:6px 8px;background:var(--white);border-radius:3px;font-size:13px;font-family:var(--font-serif)}
+.legend-item .swatch{width:22px;height:22px;border-radius:3px;border:1px solid rgba(0,0,0,.08)}
+.legend-item .shift-info{margin-right:auto;font-size:11px;color:var(--muted);letter-spacing:1px}
+
+/* ===== Schedule table ===== */
+.schedule-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:14px}
+.schedule-title{font-family:var(--font-display);font-size:32px;font-weight:700;letter-spacing:2px}
+.schedule-sub{font-family:var(--font-serif);font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.schedule-meta{font-family:var(--font-serif);font-size:13px;color:var(--gold);letter-spacing:3px;text-transform:uppercase}
+
+.table-wrap{overflow-x:auto;background:var(--white);border:1px solid var(--border)}
+table.sched{width:100%;border-collapse:collapse;min-width:800px}
+table.sched th{background:var(--ink);color:var(--white);padding:14px 10px;text-align:center;font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:2px;border:1px solid #2a2a28}
+table.sched th.shift-h{background:var(--gold);color:var(--ink)}
+table.sched td{padding:0;border:1px solid var(--border);text-align:center;vertical-align:middle;font-size:13px;height:54px;font-family:var(--font-serif)}
+table.sched td.date-c{background:var(--lightgray);font-weight:700;font-family:var(--font-display);letter-spacing:1px;width:140px;padding:8px}
+table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:2px;text-transform:uppercase;margin-top:2px;font-family:var(--font-body)}
+.cell{height:100%;width:100%;padding:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:.15s;position:relative;min-height:54px}
+.cell:hover{filter:brightness(.95);outline:2px solid var(--gold);outline-offset:-2px}
+.cell.empty{color:var(--muted);font-weight:300;font-style:italic}
+
+/* ===== Modal ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(28,28,26,.55);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(3px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--white);border:1px solid var(--border);max-width:480px;width:90%;padding:32px;border-radius:4px;box-shadow:0 30px 80px rgba(0,0,0,.25)}
+.modal h3{font-family:var(--font-display);font-size:24px;margin-bottom:6px;letter-spacing:1px}
+.modal .sub{font-family:var(--font-serif);color:var(--muted);font-size:13px;margin-bottom:20px;letter-spacing:1px}
+.modal .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:340px;overflow-y:auto;margin-bottom:18px}
+.modal .opt-card{padding:12px;border:1px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;gap:10px;border-radius:3px;transition:.15s;font-family:var(--font-serif);font-size:14px}
+.modal .opt-card:hover{border-color:var(--gold);background:var(--lightgray)}
+.modal .opt-card .dot{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.1)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* ===== Custom tab content (generic editor) ===== */
+.editor-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.custom-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--border)}
+.custom-table th, .custom-table td{border:1px solid var(--border);padding:10px;text-align:right;min-width:120px}
+.custom-table th{background:var(--ink);color:var(--white);font-family:var(--font-display);letter-spacing:1px}
+.custom-table td[contenteditable]:focus{outline:2px solid var(--gold);background:#FFFCEF}
+.section-block{margin-bottom:28px}
+.section-block h2{font-family:var(--font-display);font-size:26px;margin-bottom:6px;letter-spacing:1px}
+.section-block h2[contenteditable]:focus{outline:2px solid var(--gold);padding:2px 6px;border-radius:2px}
+.section-block .desc{font-family:var(--font-serif);color:var(--muted);font-size:14px;margin-bottom:14px}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--white);padding:14px 22px;border-radius:3px;font-family:var(--font-serif);letter-spacing:1px;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:2000;display:none}
+.toast.show{display:block;animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Pull-quote magazine style */
+.pull-quote{font-family:var(--font-display);font-style:italic;font-size:20px;color:var(--ink);border-right:3px solid var(--gold);padding:6px 16px;margin:18px 0;background:linear-gradient(to left,transparent,var(--lightgray))}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============= SIDEBAR ============= -->
+  <aside class="sidebar">
+    <div>
+      <div class="section-title">סניף</div>
+      <div class="field" style="margin-top:10px">
+        <label>בחר סניף</label>
+        <div style="display:flex;gap:6px">
+          <select id="branchSelect" style="flex:1;padding:11px;border:1px solid var(--border);border-radius:2px;font-family:var(--font-body)"></select>
+          <button class="btn btn-ghost" onclick="addBranch()" title="הוסף סניף">＋</button>
+          <button class="btn btn-ghost" onclick="renameBranch()" title="ערוך שם">✎</button>
+          <button class="btn btn-ghost" onclick="deleteBranch()" title="מחק">🗑</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">חודש ושנה</div>
+      <div class="scroll-picker" style="margin-top:10px">
+        <div class="scroll-col">
+          <div class="cap">חודש</div>
+          <div id="monthList" class="scroll-list"></div>
+        </div>
+        <div class="scroll-col">
+          <div class="cap">שנה</div>
+          <div id="yearList" class="scroll-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">שוקלים</div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input id="newWorkerName" placeholder="שם השוקל" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:2px;font-family:var(--font-body)">
+        <button class="btn btn-gold" onclick="addWorker()">הוסף</button>
+      </div>
+      <div id="workersList" class="workers-list" style="margin-top:10px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--font-serif);letter-spacing:1px">גרור שם או לחץ עליו בשבוע הראשון כדי לשבץ</div>
+    </div>
+
+    <div>
+      <div class="section-title">שוקלים חלופיים</div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input id="backupWorkerName" placeholder="שם הגיבוי" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:2px;font-family:var(--font-body)">
+        <button class="btn btn-ghost" onclick="addBackupWorker()">הוסף</button>
+      </div>
+      <div id="backupWorkersList" style="display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <div>
+      <div class="section-title">מקרא צבעים</div>
+      <div id="legend" class="legend" style="margin-top:10px"></div>
+    </div>
+
+    <div>
+      <div class="section-title">פעולות</div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="autoFill()">🪄 חישוב סבב אוטומטי</button>
+        <button class="btn btn-ghost" onclick="clearSchedule()">איפוס</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-gold" onclick="exportExcel()">📊 ייצוא לאקסל</button>
+        <button class="btn btn-ghost" onclick="saveLocal(true)">💾 שמור</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="shareWhatsApp()">📱 וואטסאפ</button>
+        <button class="btn btn-ghost" onclick="shareEmail()">✉️ מייל</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="printPage()">🖨 הדפסה</button>
+        <button class="btn btn-ghost" onclick="reminderWA()">🔔 תזכורת</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============= MAIN ============= -->
+  <div class="main">
+    <header class="masthead">
+      <div style="position:absolute;top:22px;right:44px;font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
+      <div class="brand">SHIFTS<small>The Operations Edition</small></div>
+      <div class="issue">גליון<b id="issueLabel">—</b></div>
+    </header>
+
+    <nav class="tabs" id="tabsBar"></nav>
+
+    <main id="contentHost" style="flex:1;overflow:hidden;display:flex;flex-direction:column"></main>
+  </div>
+</div>
+
+<!-- ===== Assign modal ===== -->
+<div id="modal" class="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modalTitle">בחר שוקל</h3>
+    <div class="sub" id="modalSub"></div>
+    <div id="modalOpts" class="opts"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="clearCell()">נקה משבצת</button>
+      <button class="btn btn-ghost" onclick="closeModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+const PASTELS = [
+  {name:'ורוד',val:'#FFD1E3'},{name:'תכלת',val:'#C9E4F2'},{name:'ירוק',val:'#D4EBC2'},
+  {name:'צהוב',val:'#FFF4B8'},{name:'לבנדר',val:'#E6D5E8'},{name:'אפרסק',val:'#FFD9B8'},
+  {name:'טורקיז',val:'#BEEDED'},{name:'ורד',val:'#F2DAE0'},{name:'מנטה',val:'#CCEBD6'},{name:'חול',val:'#F0E0C9'}
+];
+const SHIFTS = [
+  {key:'morning', label:'בוקר', time:'07:00–15:00'},
+  {key:'afternoon', label:'צהריים', time:'15:00–23:00'},
+  {key:'night', label:'לילה', time:'23:00–07:00'},
+  {key:'double12', label:'12 שעות (בוקר+לילה)', time:'07:00–23:00 / 23:00–07:00'}
+];
+const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const DAYS_HE = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const DEFAULT_TABS = [
+  {id:'shifts', name:'סידורי עבודה', type:'schedule'}
+];
+
+let state = loadLocal() || {
+  branches: [{
+    id: uid(), name:'סניף ראשי',
+    workers: [
+      {id:uid(), name:'דנה כהן', color:PASTELS[0].val},
+      {id:uid(), name:'יוסי לוי', color:PASTELS[1].val},
+      {id:uid(), name:'מאיה אברהם', color:PASTELS[2].val},
+      {id:uid(), name:'אורי שמש', color:PASTELS[3].val},
+      {id:uid(), name:'נועה דהן', color:PASTELS[4].val},
+      {id:uid(), name:'איתי ברק', color:PASTELS[5].val},
+    ],
+    backupWorkers: [],
+    schedules: {}, // key 'YYYY-MM' -> {dayIdx: {morning, afternoon, night}}  workerIds
+    customTabs: {}, // tabId -> {sections:[{title, headers:[], rows:[[...]]}]}
+  }],
+  currentBranch: 0,
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  tabs: structuredClone(DEFAULT_TABS),
+  currentTab: 'shifts',
+};
+
+function uid(){return 'x'+Math.random().toString(36).slice(2,9)}
+function branch(){return state.branches[state.currentBranch]}
+function monthKey(){return `${state.year}-${String(state.month+1).padStart(2,'0')}`}
+function daysInMonth(){return new Date(state.year, state.month+1, 0).getDate()}
+
+/* ============================================================
+   PERSISTENCE
+============================================================ */
+function saveLocal(announce){
+  try{localStorage.setItem('shift_scheduler_v2', JSON.stringify(state));
+    if(announce) toast('נשמר מקומית ✓');
+  }catch(e){toast('שגיאת שמירה')}
+}
+function loadLocal(){
+  try{const s = localStorage.getItem('shift_scheduler_v2'); return s?JSON.parse(s):null}catch(e){return null}
+}
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(window.__tt);window.__tt=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+function init(){
+  buildScrollPickers();
+  renderBranches();
+  renderTabs();
+  renderAll();
+  document.getElementById('newWorkerName').addEventListener('keydown',e=>{if(e.key==='Enter')addWorker()});
+  document.getElementById('backupWorkerName').addEventListener('keydown',e=>{if(e.key==='Enter')addBackupWorker()});
+}
+
+function buildScrollPickers(){
+  const mList = document.getElementById('monthList');
+  mList.innerHTML = MONTHS_HE.map((m,i)=>`<div class="opt ${i===state.month?'sel':''}" data-i="${i}">${m}</div>`).join('');
+  mList.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{state.month=+o.dataset.i; selectMonth(o)});
+
+  const yList = document.getElementById('yearList');
+  let yhtml='';
+  for(let y=2020;y<=2100;y++) yhtml+=`<div class="opt ${y===state.year?'sel':''}" data-y="${y}">${y}</div>`;
+  yList.innerHTML = yhtml;
+  yList.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{state.year=+o.dataset.y; selectYear(o)});
+
+  // center selection
+  setTimeout(()=>{
+    const ms = mList.querySelector('.opt.sel'); if(ms) ms.scrollIntoView({block:'center'});
+    const ys = yList.querySelector('.opt.sel'); if(ys) ys.scrollIntoView({block:'center'});
+  },50);
+}
+function selectMonth(el){
+  document.querySelectorAll('#monthList .opt').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel'); renderAll(); saveLocal();
+}
+function selectYear(el){
+  document.querySelectorAll('#yearList .opt').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel'); renderAll(); saveLocal();
+}
+
+/* ============================================================
+   BRANCHES
+============================================================ */
+function renderBranches(){
+  const s = document.getElementById('branchSelect');
+  s.innerHTML = state.branches.map((b,i)=>`<option value="${i}" ${i===state.currentBranch?'selected':''}>${b.name}</option>`).join('');
+  s.onchange = e=>{state.currentBranch=+e.target.value; renderAll(); saveLocal()};
+}
+function addBranch(){
+  const name = prompt('שם הסניף החדש:'); if(!name) return;
+  state.branches.push({id:uid(),name,workers:[],backupWorkers:[],schedules:{},customTabs:{}});
+  state.currentBranch = state.branches.length-1;
+  renderBranches(); renderAll(); saveLocal(true);
+}
+function renameBranch(){
+  const name = prompt('שם חדש לסניף:', branch().name); if(!name) return;
+  branch().name = name; renderBranches(); renderAll(); saveLocal(true);
+}
+function deleteBranch(){
+  if(state.branches.length<=1){toast('חייב להישאר סניף אחד');return}
+  if(!confirm('למחוק את הסניף "'+branch().name+'"?')) return;
+  state.branches.splice(state.currentBranch,1); state.currentBranch=0;
+  renderBranches(); renderAll(); saveLocal(true);
+}
+
+/* ============================================================
+   WORKERS
+============================================================ */
+function addWorker(){
+  const input = document.getElementById('newWorkerName');
+  const name = input.value.trim(); if(!name) return;
+  const used = branch().workers.map(w=>w.color);
+  const color = PASTELS.find(p=>!used.includes(p.val))?.val || PASTELS[branch().workers.length%PASTELS.length].val;
+  branch().workers.push({id:uid(), name, color});
+  input.value=''; renderWorkers(); renderLegend(); saveLocal();
+}
+function renderWorkers(){
+  const c = document.getElementById('workersList');
+  c.innerHTML = branch().workers.map(w=>`
+    <div class="worker-chip" draggable="true" data-id="${w.id}" ondragstart="dragStart(event,'${w.id}')">
+      <span class="dot" style="background:${w.color}"></span>
+      <span class="name" onclick="quickAssign('${w.id}')">${w.name}</span>
+      <input type="color" value="${w.color}" onchange="setWorkerColor('${w.id}',this.value)" style="width:24px;height:24px;border:none;background:none;cursor:pointer" title="שנה צבע">
+      <button class="edit" onclick="editWorker('${w.id}')">✎</button>
+      <button class="del" onclick="delWorker('${w.id}')">✕</button>
+    </div>`).join('') || '<div style="color:var(--muted);padding:8px;font-size:12px">אין שוקלים — הוסף למעלה</div>';
+}
+function editWorker(id){
+  const w = branch().workers.find(x=>x.id===id); if(!w) return;
+  const n = prompt('שם חדש:', w.name); if(n){w.name=n; renderWorkers(); renderLegend(); renderSchedule(); saveLocal()}
+}
+function delWorker(id){
+  if(!confirm('למחוק שוקל זה? המשמרות שלו יתפנו')) return;
+  branch().workers = branch().workers.filter(w=>w.id!==id);
+  // clear from schedule
+  for(const k in branch().schedules){
+    for(const d in branch().schedules[k]){
+      for(const s of SHIFTS) if(branch().schedules[k][d][s.key]===id) branch().schedules[k][d][s.key]=null;
+    }
+  }
+  renderWorkers(); renderLegend(); renderSchedule(); saveLocal();
+}
+function setWorkerColor(id,col){
+  const w = branch().workers.find(x=>x.id===id); if(w){w.color=col; renderLegend(); renderSchedule(); saveLocal()}
+}
+
+function addBackupWorker(){
+  const input = document.getElementById('backupWorkerName');
+  const name = input.value.trim(); if(!name) return;
+  if(!branch().backupWorkers) branch().backupWorkers = [];
+  branch().backupWorkers.push({id:uid(), name});
+  input.value=''; renderBackupWorkers(); saveLocal();
+}
+
+function renderBackupWorkers(){
+  const c = document.getElementById('backupWorkersList');
+  if(!branch().backupWorkers) branch().backupWorkers = [];
+  c.innerHTML = branch().backupWorkers.map(w=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px;background:var(--lightgray);border-radius:2px;font-size:13px">
+      <span style="flex:1">${w.name}</span>
+      <button class="btn btn-ghost" onclick="editBackupWorker('${w.id}')" style="padding:2px 4px;font-size:11px">✎</button>
+      <button class="btn btn-ghost" onclick="delBackupWorker('${w.id}')" style="padding:2px 4px;font-size:11px;color:#c0392b">✕</button>
+    </div>`).join('') || '<div style="color:var(--muted);padding:6px;font-size:12px">אין שוקלים חלופיים</div>';
+}
+
+function editBackupWorker(id){
+  const w = branch().backupWorkers.find(x=>x.id===id); if(!w) return;
+  const n = prompt('שם חדש:', w.name); if(n){w.name=n; renderBackupWorkers(); saveLocal()}
+}
+
+function delBackupWorker(id){
+  branch().backupWorkers = branch().backupWorkers.filter(w=>w.id!==id);
+  renderBackupWorkers(); saveLocal();
+}
+
+/* ============================================================
+   LEGEND
+============================================================ */
+function renderLegend(){
+  const wk = currentWeekShifts(); // {workerId: shiftKey} based on week1
+  document.getElementById('legend').innerHTML = branch().workers.map(w=>{
+    const shift = wk[w.id]; const info = shift?SHIFTS.find(s=>s.key===shift):null;
+    return `<div class="legend-item">
+      <span class="swatch" style="background:${w.color}"></span>
+      <span>${w.name}</span>
+      <span class="shift-info">${info?info.label+' · '+info.time:'—'}</span>
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:12px;padding:6px">אין שוקלים</div>';
+}
+
+function currentWeekShifts(){
+  // Look at first week (day 1..7) and return what each worker does this week
+  const sched = branch().schedules[monthKey()] || {};
+  const out = {};
+  for(let d=1; d<=7; d++){
+    const day = sched[d]; if(!day) continue;
+    for(const s of SHIFTS){
+      if(day[s.key]) out[day[s.key]] = s.key;
+    }
+  }
+  return out;
+}
+
+/* ============================================================
+   TABS
+============================================================ */
+function renderTabs(){
+  const bar = document.getElementById('tabsBar');
+  bar.innerHTML = state.tabs.map(t=>`
+    <div class="tab ${t.id===state.currentTab?'active':''}" onclick="switchTab('${t.id}')" ondblclick="renameTab('${t.id}')">
+      ${t.name}<span class="x" onclick="event.stopPropagation();deleteTab('${t.id}')" title="מחק לשונית">✕</span>
+    </div>`).join('') + `<button class="tab-add" onclick="addTab()" title="הוסף לשונית">＋</button>`;
+}
+function switchTab(id){state.currentTab=id; renderTabs(); renderContent(); saveLocal()}
+function addTab(){
+  const name = prompt('שם הלשונית החדשה:'); if(!name) return;
+  state.tabs.push({id:uid(),name,type:'custom'});
+  state.currentTab = state.tabs[state.tabs.length-1].id;
+  renderTabs(); renderContent(); saveLocal(true);
+}
+function renameTab(id){
+  const t = state.tabs.find(x=>x.id===id); if(!t) return;
+  const n = prompt('שם חדש ללשונית:', t.name); if(n){t.name=n; renderTabs(); saveLocal()}
+}
+function deleteTab(id){
+  if(state.tabs.length<=1){toast('חייבת להישאר לשונית');return}
+  if(!confirm('למחוק את הלשונית?')) return;
+  state.tabs = state.tabs.filter(t=>t.id!==id);
+  if(state.currentTab===id) state.currentTab=state.tabs[0].id;
+  renderTabs(); renderContent(); saveLocal();
+}
+
+/* ============================================================
+   RENDER ROUTER
+============================================================ */
+function renderAll(){
+  document.getElementById('issueLabel').textContent = `${MONTHS_HE[state.month]} ${state.year}`;
+  renderWorkers(); renderLegend(); renderBackupWorkers(); renderContent();
+}
+function renderContent(){
+  const host = document.getElementById('contentHost');
+  const tab = state.tabs.find(t=>t.id===state.currentTab) || state.tabs[0];
+  host.innerHTML = `<section class="content active" id="contentBody"></section>`;
+  if(tab.type==='schedule') renderSchedule();
+  else renderCustomTab(tab);
+}
+
+/* ============================================================
+   SCHEDULE TAB
+============================================================ */
+function renderSchedule(){
+  const body = document.getElementById('contentBody'); if(!body) return;
+  const dim = daysInMonth();
+  const sched = branch().schedules[monthKey()] = branch().schedules[monthKey()] || {};
+
+  // Check for consecutive work days warning
+  let warningHtml = '';
+  const warnings = getConsecutiveWorkDaysWarnings(sched, dim);
+  if(warnings.length > 0){
+    warningHtml = `<div style="background:#FFF4B8;border-left:4px solid #C9A84C;padding:12px;margin-bottom:16px;border-radius:2px;font-family:var(--font-serif);font-size:13px">
+      <strong style="color:#C9A84C">⚠ הודעה:</strong> ${warnings.join(', ')}
+    </div>`;
+  }
+
+  let html = `
+    <div class="schedule-header">
+      <div>
+        <div class="schedule-title">סידור עבודה</div>
+        <div class="schedule-sub">${branch().name} · שער ראשי · 3 שוקלים</div>
+      </div>
+      <div class="schedule-meta">${MONTHS_HE[state.month]} ${state.year}</div>
+    </div>
+    ${warningHtml}
+    <div class="pull-quote">בשבוע הראשון שבץ ידנית — הסבב הבא יתמלא אוטומטית (בוקר → צהריים → לילה).</div>
+    <div class="table-wrap">
+    <table class="sched">
+      <thead><tr>
+        <th>תאריך</th>
+        <th class="shift-h">בוקר · 07:00–15:00</th>
+        <th class="shift-h">צהריים · 15:00–23:00</th>
+        <th class="shift-h">לילה · 23:00–07:00</th>
+        <th class="shift-h">החלפה</th>
+      </tr></thead><tbody>`;
+  for(let d=1; d<=dim; d++){
+    const dateObj = new Date(state.year, state.month, d);
+    const dayName = DAYS_HE[dateObj.getDay()];
+    const isWeek1 = d<=7;
+    const day = sched[d] || {};
+    html += `<tr><td class="date-c">${d}/${state.month+1}<small>${dayName}${isWeek1?' · שבוע 1':''}</small></td>`;
+    
+    // Check if this is a double12 day
+    if(day.double12){
+      html += `<td colspan="3"><div class="cell" style="background:#FFD1E3;font-weight:700;color:var(--ink)"
+        onclick="clearDouble12(${d})">משמרת 12 שעות (בוקר+לילה)</div></td>`;
+    } else {
+      for(const s of SHIFTS){
+        if(s.key === 'double12') continue; // Skip the double12 shift in the loop
+        const wid = day[s.key]; 
+        let w = null;
+        if(wid){
+          if(wid.startsWith('backup_')){
+            const backupId = wid.replace('backup_', '');
+            const backup = branch().backupWorkers.find(b => b.id === backupId);
+            w = {name: backup ? backup.name : 'שוקל חלופי', color: '#E8D9A8'};
+          } else {
+            w = branch().workers.find(x=>x.id===wid);
+          }
+        }
+        const bg = w?w.color:'transparent';
+        html += `<td><div class="cell ${w?'':'empty'}" style="background:${bg}"
+          ondragover="event.preventDefault()" ondrop="dropOn(event,${d},'${s.key}')"
+          onclick="openAssign(${d},'${s.key}')">${w?w.name:'+ שבץ'}</div></td>`;
+      }
+    }
+    html += `<td style="padding:4px;text-align:center"><button class="btn btn-ghost" style="padding:6px 4px;font-size:11px" onclick="openSwapModal(${d})">⇄</button></td>`;
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div>`;
+  body.innerHTML = html;
+}
+
+function getConsecutiveWorkDaysWarnings(sched, dim){
+  const warnings = [];
+  const workers = branch().workers;
+  
+  for(const w of workers){
+    let consecutive = 0;
+    const issues = [];
+    
+    for(let d=1; d<=dim; d++){
+      const day = sched[d] || {};
+      const isWorking = SHIFTS.some(s => day[s.key] === w.id);
+      
+      if(isWorking){
+        consecutive++;
+        if(consecutive > 3){
+          issues.push(`${w.name}: עבד ${consecutive} ימים ברציפות`);
+        }
+      } else {
+        consecutive = 0;
+      }
+    }
+  }
+  
+  return warnings;
+}
+
+/* ----- Assignment ----- */
+let modalCtx = null;
+function openAssign(day, shiftKey){
+  modalCtx = {day, shiftKey};
+  const sh = SHIFTS.find(s=>s.key===shiftKey);
+  document.getElementById('modalTitle').textContent = `שבץ שוקל — ${sh.label}`;
+  document.getElementById('modalSub').textContent = `${day}/${state.month+1}/${state.year} · ${sh.time}`;
+  const opts = branch().workers.map(w=>`
+    <div class="opt-card" onclick="assign('${w.id}')">
+      <span class="dot" style="background:${w.color}"></span>${w.name}
+    </div>`).join('') || '<div style="color:var(--muted)">אין שוקלים. הוסף בצד.</div>';
+  document.getElementById('modalOpts').innerHTML = opts;
+  document.getElementById('modal').classList.add('show');
+}
+
+function openSwapModal(day){
+  const sched = branch().schedules[monthKey()] || {};
+  const dayData = sched[day];
+  if(!dayData) {toast('אין משמרות ביום זה'); return;}
+  
+  const workers = [];
+  for(const s of SHIFTS){
+    if(dayData[s.key]){
+      const w = branch().workers.find(x=>x.id===dayData[s.key]);
+      if(w) workers.push({id:dayData[s.key], name:w.name, shift:s.key, label:s.label});
+    }
+  }
+  
+  if(workers.length < 2) {toast('צריכים לפחות שוקלים 2 לחילופין'); return;}
+  
+  document.getElementById('modalTitle').textContent = `החלפת משמרות ב-${day}/${state.month+1}`;
+  document.getElementById('modalSub').textContent = 'בחר שוקל ראשון';
+  let opts = '<div style="display:flex;flex-direction:column;gap:8px">';
+  for(const w of workers){
+    opts += `<button class="btn btn-gold" style="width:100%;text-align:right" onclick="selectSwapWorker1('${w.id}','${w.shift}')">${w.name} (${w.label})</button>`;
+  }
+  opts += '</div>';
+  document.getElementById('modalOpts').innerHTML = opts;
+  document.getElementById('modal').classList.add('show');
+  window.swapDay = day;
+}
+
+let swapW1 = null, swapS1 = null;
+function selectSwapWorker1(wid, shift){
+  swapW1 = {wid, shift};
+  const sched = branch().schedules[monthKey()] || {};
+  const dayData = sched[window.swapDay];
+  
+  const workers = [];
+  for(const s of SHIFTS){
+    if(s.key !== shift && dayData[s.key]){
+      const w = branch().workers.find(x=>x.id===dayData[s.key]);
+      if(w) workers.push({id:dayData[s.key], name:w.name, shift:s.key, label:s.label});
+    }
+  }
+  
+  document.getElementById('modalTitle').textContent = 'בחר שוקל שני';
+  let opts = '<div style="display:flex;flex-direction:column;gap:8px">';
+  for(const w of workers){
+    opts += `<button class="btn btn-ghost" style="width:100%;text-align:right" onclick="performSwap('${w.id}','${w.shift}')">${w.name} (${w.label})</button>`;
+  }
+  opts += '</div>';
+  document.getElementById('modalOpts').innerHTML = opts;
+}
+
+function performSwap(wid2, shift2){
+  const sched = branch().schedules[monthKey()];
+  const dayData = sched[window.swapDay];
+  
+  [dayData[swapW1.shift], dayData[shift2]] = [dayData[shift2], dayData[swapW1.shift]];
+  
+  closeModal(); renderSchedule(); renderLegend(); saveLocal();
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('show'); modalCtx=null}
+function assign(wid){
+  const {day, shiftKey} = modalCtx;
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {};
+  
+  // Check for 6+ consecutive work days
+  const consecutive = countConsecutiveWorkDays(sched, day, wid);
+  
+  if(consecutive >= 6){
+    // Show options modal
+    showConsecutiveDaysWarningModal(wid, day, shiftKey, consecutive);
+  } else {
+    sched[day][shiftKey] = wid;
+    closeModal(); renderSchedule(); renderLegend(); saveLocal();
+  }
+}
+
+function countConsecutiveWorkDays(sched, targetDay, wid){
+  // Count consecutive days this worker would work including targetDay
+  let count = 0;
+  
+  // Go backwards to find start
+  let start = targetDay;
+  for(let d = targetDay - 1; d >= 1; d--){
+    const day = sched[d] || {};
+    let working = false;
+    for(const s of SHIFTS){
+      if(day[s.key] === wid) working = true;
+    }
+    if(!working) break;
+    start = d;
+  }
+  
+  // Go forwards to find end
+  let end = targetDay;
+  const dim = daysInMonth();
+  for(let d = targetDay + 1; d <= dim; d++){
+    const day = sched[d] || {};
+    let working = false;
+    for(const s of SHIFTS){
+      if(day[s.key] === wid) working = true;
+    }
+    if(!working) break;
+    end = d;
+  }
+  
+  return (end - start + 1);
+}
+
+function showConsecutiveDaysWarningModal(wid, day, shiftKey, consecutive){
+  const worker = branch().workers.find(w => w.id === wid);
+  const title = `⚠ הודעה חשובה`;
+  const msg = `לשוקל ${worker.name} יש רצף של ${consecutive} ימי עבודה.<br>צריך לתת 36 שעות חופש לאחר 6 ימים.<br><br>בחר אפשרות:`;
+  
+  let html = `<div style="text-align:center;padding:20px">
+    <div style="font-size:14px;margin-bottom:20px;line-height:1.6">${msg}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-gold" style="width:100%" onclick="confirmAssignWorker('${wid}','${day}','${shiftKey}')">
+        אישור — שבץ שוקל זה בכל זאת
+      </button>
+      <button class="btn btn-primary" style="width:100%" onclick="switchToBackupWorker('${day}','${shiftKey}')">
+        בחר שוקל חלופי
+      </button>
+      <button class="btn btn-ghost" style="width:100%" onclick="switchToDouble12('${day}')">
+        בחר משמרת 12 שעות (בוקר+לילה)
+      </button>
+      <button class="btn btn-ghost" style="width:100%" onclick="closeModal()">
+        ביטול
+      </button>
+    </div>
+  </div>`;
+  
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalSub').textContent = '';
+  document.getElementById('modalOpts').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+  
+  window.pendingAssign = {wid, day, shiftKey};
+}
+
+function confirmAssignWorker(wid, day, shiftKey){
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {};
+  sched[day][shiftKey] = wid;
+  closeModal(); renderSchedule(); renderLegend(); saveLocal();
+}
+
+function switchToBackupWorker(day, shiftKey){
+  closeModal();
+  const backups = branch().backupWorkers || [];
+  if(backups.length === 0){
+    toast('אין שוקלים חלופיים. הוסף בצד ימין');
+    return;
+  }
+  
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  for(const b of backups){
+    html += `<button class="btn btn-gold" style="width:100%;text-align:right" onclick="assignBackupWorker('${b.id}','${day}','${shiftKey}')">${b.name}</button>`;
+  }
+  html += '</div>';
+  
+  document.getElementById('modalTitle').textContent = 'בחר שוקל חלופי';
+  document.getElementById('modalSub').textContent = '';
+  document.getElementById('modalOpts').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
+}
+
+function assignBackupWorker(backupId, day, shiftKey){
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {};
+  sched[day][shiftKey] = `backup_${backupId}`;
+  closeModal(); renderSchedule(); renderLegend(); saveLocal();
+}
+
+function switchToDouble12(day){
+  closeModal();
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {};
+  sched[day].morning = null;
+  sched[day].afternoon = null;
+  sched[day].night = null;
+  sched[day].double12 = 'double12_marker';
+  renderSchedule(); renderLegend(); saveLocal();
+  toast('משמרת 12 שעות נשבצה ✓');
+}
+
+function clearDouble12(day){
+  const sched = branch().schedules[monthKey()];
+  if(sched[day]) sched[day].double12 = null;
+  renderSchedule(); renderLegend(); saveLocal();
+}
+
+
+function clearCell(){
+  if(!modalCtx) return;
+  const {day, shiftKey} = modalCtx;
+  if(branch().schedules[monthKey()]?.[day]) branch().schedules[monthKey()][day][shiftKey]=null;
+  closeModal(); renderSchedule(); renderLegend(); saveLocal();
+}
+function dragStart(e,id){e.dataTransfer.setData('text/plain',id)}
+function dropOn(e,day,shiftKey){
+  const wid = e.dataTransfer.getData('text/plain');
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {}; 
+  
+  // Check for 6+ consecutive work days before assigning
+  const consecutive = countConsecutiveWorkDays(sched, day, wid);
+  if(consecutive >= 6){
+    showConsecutiveDaysWarningModal(wid, day, shiftKey, consecutive);
+  } else {
+    sched[day][shiftKey] = wid;
+    renderSchedule(); renderLegend(); saveLocal();
+  }
+}
+function quickAssign(wid){
+  // Click on worker chip — assign to next empty week-1 cell rotating shifts
+  const sched = branch().schedules[monthKey()] = branch().schedules[monthKey()] || {};
+  for(let d=1; d<=7; d++){
+    sched[d] = sched[d] || {};
+    for(const s of SHIFTS){
+      if(!sched[d][s.key]){
+        sched[d][s.key] = wid; renderSchedule(); renderLegend(); saveLocal();
+        toast(`שובץ ל-${d}/${state.month+1} · ${s.label}`); return;
+      }
+    }
+  }
+  toast('שבוע ראשון מלא — שבץ ידנית');
+}
+
+/* ----- Auto rotate ----- */
+function autoFill(){
+  const sched = branch().schedules[monthKey()] = branch().schedules[monthKey()] || {};
+  const dim = daysInMonth();
+  const order = ['morning','afternoon','night'];
+  // Take week 1 as baseline; for each worker find shift they did in week1
+  const baseline = {}; // workerId -> shiftKey
+  for(let d=1; d<=7; d++){
+    const day = sched[d]; if(!day) continue;
+    for(const s of SHIFTS){
+      if(day[s.key] && !baseline[day[s.key]]) baseline[day[s.key]] = s.key;
+    }
+  }
+  if(Object.keys(baseline).length===0){toast('שבץ קודם את שבוע 1');return}
+
+  // For each worker, we need to know which DAY of the week they work, then rotate by week
+  const workerDayInWeek = {}; // workerId -> [day-of-week indexes 0..6 (Sun..Sat)]
+  for(let d=1; d<=7; d++){
+    const day = sched[d]; if(!day) continue;
+    const dow = new Date(state.year, state.month, d).getDay();
+    for(const s of SHIFTS){
+      const wid = day[s.key]; if(!wid) continue;
+      workerDayInWeek[wid] = workerDayInWeek[wid]||[];
+      if(!workerDayInWeek[wid].includes(dow)) workerDayInWeek[wid].push(dow);
+    }
+  }
+
+  for(let d=8; d<=dim; d++){
+    const dow = new Date(state.year, state.month, d).getDay();
+    const weekOffset = Math.floor((d-1)/7); // 0..n
+    sched[d] = sched[d] || {};
+    for(const wid in baseline){
+      if(!workerDayInWeek[wid] || !workerDayInWeek[wid].includes(dow)) continue;
+      const baseIdx = order.indexOf(baseline[wid]);
+      const shiftKey = order[(baseIdx + weekOffset) % 3];
+      sched[d][shiftKey] = wid;
+    }
+  }
+  renderSchedule(); renderLegend(); saveLocal();
+  toast('סבב חושב אוטומטית ✓');
+}
+
+function clearSchedule(){
+  if(!confirm('לאפס את כל החודש?')) return;
+  branch().schedules[monthKey()] = {};
+  renderSchedule(); renderLegend(); saveLocal();
+}
+
+/* ============================================================
+   CUSTOM TABS (Hosting, Cleaning, etc.) — editable tables
+============================================================ */
+function renderCustomTab(tab){
+  const body = document.getElementById('contentBody');
+  const data = branch().customTabs[tab.id] = branch().customTabs[tab.id] || {
+    sections: [defaultSectionFor(tab.name)]
+  };
+  let html = `
+    <div class="schedule-header">
+      <div>
+        <div class="schedule-title">${tab.name}</div>
+        <div class="schedule-sub">${branch().name} · ${MONTHS_HE[state.month]} ${state.year}</div>
+      </div>
+      <div class="schedule-meta">EDITORIAL</div>
+    </div>
+    <div class="editor-toolbar">
+      <button class="btn btn-gold" onclick="addSection('${tab.id}')">+ הוסף בלוק</button>
+      <button class="btn btn-ghost" onclick="addRow('${tab.id}',-1)">+ שורה</button>
+      <button class="btn btn-ghost" onclick="addCol('${tab.id}',-1)">+ עמודה</button>
+    </div>
+  `;
+  data.sections.forEach((sec,si)=>{
+    html += `<div class="section-block">
+      <h2 contenteditable onblur="updateSec('${tab.id}',${si},'title',this.innerText)">${sec.title}</h2>
+      <div class="desc" contenteditable onblur="updateSec('${tab.id}',${si},'desc',this.innerText)">${sec.desc||'לחץ לעריכת תיאור'}</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn btn-ghost" onclick="addRow('${tab.id}',${si})">+ שורה</button>
+        <button class="btn btn-ghost" onclick="addCol('${tab.id}',${si})">+ עמודה</button>
+        <button class="btn btn-ghost" onclick="delSection('${tab.id}',${si})">🗑 מחק בלוק</button>
+      </div>
+      <table class="custom-table"><thead><tr>`;
+    sec.headers.forEach((h,ci)=>{
+      html += `<th contenteditable onblur="updateHeader('${tab.id}',${si},${ci},this.innerText)">${h}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    sec.rows.forEach((row,ri)=>{
+      html += `<tr>`;
+      row.forEach((cell,ci)=>{
+        html += `<td contenteditable onblur="updateCell('${tab.id}',${si},${ri},${ci},this.innerText)">${cell}</td>`;
+      });
+      html += `<td style="width:30px;text-align:center"><button class="btn btn-ghost" style="padding:4px 8px" onclick="delRow('${tab.id}',${si},${ri})">✕</button></td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+  body.innerHTML = html;
+}
+function defaultSectionFor(name){
+  return {title:name, desc:'תיאור או הערה', headers:['שם','תאריך','סטטוס','הערות'], rows:[['','','','']]};
+}
+function getTabData(tabId){return branch().customTabs[tabId]}
+function updateSec(tabId,si,field,val){getTabData(tabId).sections[si][field]=val; saveLocal()}
+function updateHeader(tabId,si,ci,val){getTabData(tabId).sections[si].headers[ci]=val; saveLocal()}
+function updateCell(tabId,si,ri,ci,val){getTabData(tabId).sections[si].rows[ri][ci]=val; saveLocal()}
+function addSection(tabId){
+  getTabData(tabId).sections.push(defaultSectionFor('בלוק חדש'));
+  renderContent(); saveLocal();
+}
+function delSection(tabId,si){
+  if(!confirm('למחוק בלוק?')) return;
+  getTabData(tabId).sections.splice(si,1);
+  if(getTabData(tabId).sections.length===0) getTabData(tabId).sections.push(defaultSectionFor('חדש'));
+  renderContent(); saveLocal();
+}
+function addRow(tabId, si){
+  const data = getTabData(tabId); if(!data) return;
+  const targets = si<0 ? data.sections : [data.sections[si]];
+  targets.forEach(s=> s.rows.push(s.headers.map(()=>'')));
+  renderContent(); saveLocal();
+}
+function addCol(tabId, si){
+  const data = getTabData(tabId); if(!data) return;
+  const name = prompt('שם העמודה:','חדש'); if(!name) return;
+  const targets = si<0 ? data.sections : [data.sections[si]];
+  targets.forEach(s=>{s.headers.push(name); s.rows.forEach(r=>r.push(''))});
+  renderContent(); saveLocal();
+}
+function delRow(tabId,si,ri){
+  getTabData(tabId).sections[si].rows.splice(ri,1);
+  renderContent(); saveLocal();
+}
+
+/* ============================================================
+   EXPORT / SHARE
+============================================================ */
+function exportExcel(){
+  const wb = XLSX.utils.book_new();
+  const tab = state.tabs.find(t=>t.id===state.currentTab);
+  if(tab.type==='schedule'){
+    const dim = daysInMonth();
+    const sched = branch().schedules[monthKey()] || {};
+    const rows = [['תאריך','יום','בוקר 07-15','צהריים 15-23','לילה 23-07']];
+    for(let d=1; d<=dim; d++){
+      const day = sched[d] || {};
+      const nm = id => {
+        if(!id) return '';
+        if(id.startsWith('backup_')){
+          const backupId = id.replace('backup_', '');
+          return branch().backupWorkers.find(b => b.id === backupId)?.name || 'שוקל חלופי';
+        }
+        return branch().workers.find(w=>w.id===id)?.name||'';
+      };
+      const dow = DAYS_HE[new Date(state.year,state.month,d).getDay()];
+      const morning = day.double12 ? 'משמרת 12 שעות' : nm(day.morning);
+      const afternoon = day.double12 ? '' : nm(day.afternoon);
+      const night = day.double12 ? '' : nm(day.night);
+      rows.push([`${d}/${state.month+1}/${state.year}`, dow, morning, afternoon, night]);
+    }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, `סידור ${MONTHS_HE[state.month]}`);
+  } else {
+    const data = getTabData(tab.id);
+    data.sections.forEach((s,i)=>{
+      const aoa = [[s.title],[''], s.headers, ...s.rows];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, (s.title||`גיליון ${i+1}`).slice(0,28));
+    });
+  }
+  XLSX.writeFile(wb, `${tab.name}_${branch().name}_${MONTHS_HE[state.month]}_${state.year}.xlsx`);
+  toast('הקובץ הורד ✓');
+}
+
+function buildTextSummary(){
+  const tab = state.tabs.find(t=>t.id===state.currentTab);
+  let txt = `📋 ${tab.name} — ${branch().name}\n${MONTHS_HE[state.month]} ${state.year}\n`;
+  if(tab.type==='schedule'){
+    const sched = branch().schedules[monthKey()] || {};
+    const dim = daysInMonth();
+    for(let d=1; d<=dim; d++){
+      const day = sched[d]; if(!day) continue;
+      const nm = id => {
+        if(!id) return '-';
+        if(id.startsWith('backup_')){
+          const backupId = id.replace('backup_', '');
+          return branch().backupWorkers.find(b => b.id === backupId)?.name || 'שוקל חלופי';
+        }
+        return branch().workers.find(w=>w.id===id)?.name||'-';
+      };
+      if(day.double12){
+        txt += `\n${d}/${state.month+1}: 🔁 משמרת 12 שעות`;
+      } else {
+        txt += `\n${d}/${state.month+1}: 🌅${nm(day.morning)} ☀️${nm(day.afternoon)} 🌙${nm(day.night)}`;
+      }
+    }
+  }
+  return txt;
+}
+function shareWhatsApp(){
+  const url = `https://wa.me/?text=${encodeURIComponent(buildTextSummary())}`;
+  window.open(url,'_blank');
+}
+function shareEmail(){
+  const subj = encodeURIComponent(`סידור עבודה - ${MONTHS_HE[state.month]} ${state.year}`);
+  const body = encodeURIComponent(buildTextSummary());
+  window.location.href = `mailto:?subject=${subj}&body=${body}`;
+}
+function reminderWA(){
+  const msg = prompt('תוכן התזכורת:', `תזכורת: משמרת היום בשער ${branch().name}`);
+  if(!msg) return;
+  const phone = prompt('מספר טלפון (לא חובה, פורמט בינ"ל בלי +):','');
+  const url = `https://wa.me/${phone||''}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+}
+function printPage(){window.print()}
+
+init();
+</script>
+</body>
+</html>
