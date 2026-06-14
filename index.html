@@ -29,7 +29,7 @@ button{font-family:inherit}
 
 /* ===== Magazine masthead ===== */
 .masthead{padding:22px 44px 14px;border-bottom:3px double var(--ink);display:flex;justify-content:space-between;align-items:flex-end;gap:24px;background:var(--white);position:relative}
-.masthead .brand{font-family:var(--font-display);font-weight:900;font-size:42px;letter-spacing:6px;text-transform:uppercase;line-height:1}
+.masthead .brand{font-family:var(--font-display);font-weight:900;font-size:42px;letter-spacing:6px;text-transform:uppercase;line-height:1;padding-right:72px}
 .masthead .brand small{display:block;font-family:var(--font-serif);font-size:12px;letter-spacing:8px;color:var(--gold);margin-top:6px;font-weight:400;text-transform:uppercase}
 .masthead .issue{font-family:var(--font-serif);font-size:13px;color:var(--muted);text-align:left;letter-spacing:2px;text-transform:uppercase}
 .masthead .issue b{display:block;font-size:22px;color:var(--ink);letter-spacing:3px;font-weight:700;margin-top:4px}
@@ -62,6 +62,8 @@ button{font-family:inherit}
 .btn-gold:hover{background:var(--ink);color:var(--gold)}
 .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--border)}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.btn-panel{background:var(--white);color:var(--ink);border:1px solid var(--border)}
+.btn-panel:hover{border-color:var(--gold);color:var(--gold);background:var(--white)}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap}
 .btn-row .btn{flex:1;min-width:120px}
 
@@ -107,6 +109,16 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
 .cell{height:100%;width:100%;padding:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:.15s;position:relative;min-height:54px}
 .cell:hover{filter:brightness(.95);outline:2px solid var(--gold);outline-offset:-2px}
 .cell.empty{color:var(--muted);font-weight:300;font-style:italic}
+.cell.drag-enabled{cursor:grab}
+.cell.drag-enabled:active{cursor:grabbing}
+.cell.double12{padding:0;overflow:hidden}
+.cell.double12 .whole-shift{height:100%;width:100%;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center}
+.cell.double12 .split-shift{height:100%;width:100%;display:flex;direction:rtl}
+.cell.double12 .half-shift{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;font-size:12px;line-height:1.2;min-height:54px}
+.cell.double12 .half-shift.empty-part{background:transparent}
+.cell.double12 .half-shift.drop-zone{position:relative}
+.cell.double12 .half-shift.drop-zone:hover{outline:2px dashed rgba(201,168,76,.8);outline-offset:-2px}
+.cell .shift-badge{position:absolute;top:4px;left:4px;font-size:9px;letter-spacing:1px;background:rgba(255,255,255,.75);padding:2px 4px;border-radius:2px}
 
 /* ===== Modal ===== */
 .modal-bg{position:fixed;inset:0;background:rgba(28,28,26,.55);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(3px)}
@@ -204,20 +216,23 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
     <div>
       <div class="section-title">פעולות</div>
       <div class="btn-row" style="margin-top:10px">
-        <button class="btn btn-primary" onclick="autoFill()">🪄 חישוב סבב אוטומטי</button>
-        <button class="btn btn-ghost" onclick="clearSchedule()">איפוס</button>
+        <button class="btn btn-panel" onclick="autoFill()">🪄 חישוב סבב אוטומטי</button>
+        <button class="btn btn-panel" onclick="clearSchedule()">איפוס</button>
       </div>
       <div class="btn-row" style="margin-top:8px">
-        <button class="btn btn-gold" onclick="exportExcel()">📊 ייצוא לאקסל</button>
-        <button class="btn btn-ghost" onclick="saveLocal(true)">💾 שמור</button>
+        <button class="btn btn-panel" id="undoBtn" onclick="undoAction()">↷ Undo</button>
+        <button class="btn btn-panel" id="redoBtn" onclick="redoAction()">↶ Redo</button>
       </div>
       <div class="btn-row" style="margin-top:8px">
-        <button class="btn btn-ghost" onclick="shareWhatsApp()">📱 וואטסאפ</button>
-        <button class="btn btn-ghost" onclick="shareEmail()">✉️ מייל</button>
+        <button class="btn btn-panel" onclick="exportExcel()">📊 ייצוא לאקסל</button>
+        <button class="btn btn-panel" onclick="saveLocal(true)">💾 שמור</button>
       </div>
       <div class="btn-row" style="margin-top:8px">
-        <button class="btn btn-ghost" onclick="printPage()">🖨 הדפסה</button>
-        <button class="btn btn-ghost" onclick="reminderWA()">🔔 תזכורת</button>
+        <button class="btn btn-panel" onclick="shareWhatsApp()">📱 וואטסאפ</button>
+        <button class="btn btn-panel" onclick="shareEmail()">✉️ מייל</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-panel" onclick="printPage()">🖨 הדפסה</button>
       </div>
     </div>
   </aside>
@@ -225,7 +240,7 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
   <!-- ============= MAIN ============= -->
   <div class="main">
     <header class="masthead">
-      <div style="position:absolute;top:22px;right:120px;font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
+      <div style="position:absolute;top:10px;right:120px;font-family:var(--font-serif);color:var(--gold);font-size:12px;letter-spacing:2px">בס"ד</div>
       <div class="brand">משמרות<small>ניהול משמרות קל ויעיל</small></div>
       <div class="issue">גליון<b id="issueLabel">—</b></div>
     </header>
@@ -243,8 +258,8 @@ table.sched td.date-c small{display:block;font-size:10px;color:var(--muted);font
     <div class="sub" id="modalSub"></div>
     <div id="modalOpts" class="opts"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="clearCell()">נקה משבצת</button>
-      <button class="btn btn-ghost" onclick="closeModal()">ביטול</button>
+      <button class="btn btn-ghost" id="modalClearBtn" onclick="clearCell()">נקה משבצת</button>
+      <button class="btn btn-ghost" id="modalCancelBtn" onclick="closeModal()">ביטול</button>
     </div>
   </div>
 </div>
@@ -293,6 +308,10 @@ let state = loadLocal() || {
   tabs: structuredClone(DEFAULT_TABS),
   currentTab: 'shifts',
 };
+let undoStack = [];
+let redoStack = [];
+let lastSavedSnapshot = JSON.stringify(state);
+let isRestoringHistory = false;
 
 function uid(){return 'x'+Math.random().toString(36).slice(2,9)}
 function branch(){return state.branches[state.currentBranch]}
@@ -303,7 +322,9 @@ function daysInMonth(){return new Date(state.year, state.month+1, 0).getDate()}
    PERSISTENCE
 ============================================================ */
 function saveLocal(announce){
-  try{localStorage.setItem('shift_scheduler_v2', JSON.stringify(state));
+  try{
+    captureHistorySnapshot();
+    localStorage.setItem('shift_scheduler_v2', JSON.stringify(state));
     if(announce) toast('נשמר מקומית ✓');
   }catch(e){toast('שגיאת שמירה')}
 }
@@ -323,8 +344,69 @@ function init(){
   renderBranches();
   renderTabs();
   renderAll();
+  updateHistoryButtons();
   document.getElementById('newWorkerName').addEventListener('keydown',e=>{if(e.key==='Enter')addWorker()});
   document.getElementById('backupWorkerName').addEventListener('keydown',e=>{if(e.key==='Enter')addBackupWorker()});
+}
+
+function captureHistorySnapshot(){
+  const currentSnapshot = JSON.stringify(state);
+  if(currentSnapshot === lastSavedSnapshot){
+    updateHistoryButtons();
+    return;
+  }
+  if(!isRestoringHistory){
+    undoStack.push(lastSavedSnapshot);
+    if(undoStack.length > 100) undoStack.shift();
+    redoStack = [];
+  }
+  lastSavedSnapshot = currentSnapshot;
+  updateHistoryButtons();
+}
+
+function restoreStateFromSnapshot(snapshot){
+  if(!snapshot) return;
+  const sidebar = document.querySelector('.sidebar');
+  const contentBody = document.getElementById('contentBody');
+  const savedSidebarScroll = sidebar ? sidebar.scrollTop : 0;
+  const savedContentScroll = contentBody ? contentBody.scrollTop : 0;
+  isRestoringHistory = true;
+  state = JSON.parse(snapshot);
+  lastSavedSnapshot = snapshot;
+  localStorage.setItem('shift_scheduler_v2', snapshot);
+  buildScrollPickers();
+  renderBranches();
+  renderTabs();
+  renderAll();
+  requestAnimationFrame(()=>{
+    const nextSidebar = document.querySelector('.sidebar');
+    const nextContentBody = document.getElementById('contentBody');
+    if(nextSidebar) nextSidebar.scrollTop = savedSidebarScroll;
+    if(nextContentBody) nextContentBody.scrollTop = savedContentScroll;
+  });
+  isRestoringHistory = false;
+  updateHistoryButtons();
+}
+
+function undoAction(){
+  if(!undoStack.length) return;
+  redoStack.push(JSON.stringify(state));
+  const snapshot = undoStack.pop();
+  restoreStateFromSnapshot(snapshot);
+}
+
+function redoAction(){
+  if(!redoStack.length) return;
+  undoStack.push(JSON.stringify(state));
+  const snapshot = redoStack.pop();
+  restoreStateFromSnapshot(snapshot);
+}
+
+function updateHistoryButtons(){
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  if(undoBtn) undoBtn.disabled = undoStack.length === 0;
+  if(redoBtn) redoBtn.disabled = redoStack.length === 0;
 }
 
 function buildScrollPickers(){
@@ -566,21 +648,7 @@ function renderSchedule(){
     
     for(const s of SHIFTS){
       if(s.key === 'double12') continue;
-      const wid = day[s.key]; 
-      let w = null;
-      if(wid){
-        if(wid.startsWith('backup_')){
-          const backupId = wid.replace('backup_', '');
-          const backup = branch().backupWorkers.find(b => b.id === backupId);
-          w = {name: backup ? backup.name : 'שוקל חלופי', color: '#E8D9A8'};
-        } else {
-          w = branch().workers.find(x=>x.id===wid);
-        }
-      }
-      const bg = w?w.color:'transparent';
-      html += `<td><div class="cell ${w?'':'empty'}" style="background:${bg}"
-        ondragover="event.preventDefault()" ondrop="dropOn(event,${d},'${s.key}')"
-        onclick="openAssign(${d},'${s.key}')">${w?w.name:'+ שבץ'}</div></td>`;
+      html += renderShiftCell(day, d, s.key);
     }
     
     // Notes column
@@ -592,6 +660,63 @@ function renderSchedule(){
   }
   html += `</tbody></table></div>`;
   body.innerHTML = html;
+}
+
+function getWorkerDisplayInfo(id){
+  if(!id) return null;
+  if(id.startsWith('backup_')){
+    const backupId = id.replace('backup_', '');
+    const backup = branch().backupWorkers.find(b => b.id === backupId);
+    return {name: backup ? backup.name : 'שוקל חלופי', color: '#E8D9A8'};
+  }
+  const worker = branch().workers.find(x=>x.id===id);
+  return worker ? {name: worker.name, color: worker.color} : null;
+}
+
+function renderShiftCell(day, dayNumber, shiftKey){
+  const assigned = getWorkerDisplayInfo(day[shiftKey]);
+  const doubleMorning = getWorkerDisplayInfo(day.double12morning);
+  const doubleNight = getWorkerDisplayInfo(day.double12night);
+
+  if(assigned){
+    return `<td><div class="cell drag-enabled" draggable="true" style="background:${assigned.color}"
+      ondragstart="dragScheduleAssignment(event,${dayNumber},'${shiftKey}')"
+      ondragover="event.preventDefault()" ondrop="dropOn(event,${dayNumber},'${shiftKey}')"
+      onclick="openAssign(${dayNumber},'${shiftKey}')">${assigned.name}</div></td>`;
+  }
+
+  if(shiftKey === 'morning' && doubleMorning){
+    return `<td><div class="cell double12 drag-enabled" draggable="true" style="background:${doubleMorning.color}"
+      ondragstart="dragScheduleAssignment(event,${dayNumber},'double12morning')"
+      ondragover="event.preventDefault()" ondrop="dropOn(event,${dayNumber},'${shiftKey}')"
+      onclick="openAssign(${dayNumber},'${shiftKey}')">
+        <div class="whole-shift">${doubleMorning.name}</div>
+      </div></td>`;
+  }
+
+  if(shiftKey === 'night' && doubleNight){
+    return `<td><div class="cell double12 drag-enabled" draggable="true" style="background:${doubleNight.color}"
+      ondragstart="dragScheduleAssignment(event,${dayNumber},'double12night')"
+      ondragover="event.preventDefault()" ondrop="dropOn(event,${dayNumber},'${shiftKey}')"
+      onclick="openAssign(${dayNumber},'${shiftKey}')">
+        <div class="whole-shift">${doubleNight.name}</div>
+      </div></td>`;
+  }
+
+  if(shiftKey === 'afternoon' && (doubleMorning || doubleNight)){
+    return `<td><div class="cell double12"
+      ondragover="event.preventDefault()" ondrop="dropOn(event,${dayNumber},'${shiftKey}')"
+      onclick="openAssign(${dayNumber},'${shiftKey}')">
+        <div class="split-shift">
+          <div class="half-shift drop-zone ${doubleMorning?'':'empty-part'} ${doubleMorning?'drag-enabled':''}" ${doubleMorning ? `draggable="true" ondragstart="dragScheduleAssignment(event,${dayNumber},'double12morning')"` : ''} ondragover="event.preventDefault();event.stopPropagation()" ondrop="dropOnHalf(event,${dayNumber},'double12morning')" style="background:${doubleMorning ? doubleMorning.color : 'transparent'}">${doubleMorning ? doubleMorning.name : ''}</div>
+          <div class="half-shift drop-zone ${doubleNight?'':'empty-part'} ${doubleNight?'drag-enabled':''}" ${doubleNight ? `draggable="true" ondragstart="dragScheduleAssignment(event,${dayNumber},'double12night')"` : ''} ondragover="event.preventDefault();event.stopPropagation()" ondrop="dropOnHalf(event,${dayNumber},'double12night')" style="background:${doubleNight ? doubleNight.color : 'transparent'}">${doubleNight ? doubleNight.name : ''}</div>
+        </div>
+      </div></td>`;
+  }
+
+  return `<td><div class="cell empty"
+    ondragover="event.preventDefault()" ondrop="dropOn(event,${dayNumber},'${shiftKey}')"
+    onclick="openAssign(${dayNumber},'${shiftKey}')">+ שבץ</div></td>`;
 }
 
 function getConsecutiveWorkDaysWarnings(sched, dim){
@@ -622,8 +747,21 @@ function getConsecutiveWorkDaysWarnings(sched, dim){
 
 /* ----- Assignment ----- */
 let modalCtx = null;
+function setModalActions({showClear=true, clearText='נקה משבצת', showCancel=true, cancelText='ביטול'} = {}){
+  const clearBtn = document.getElementById('modalClearBtn');
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  if(clearBtn){
+    clearBtn.style.display = showClear ? 'inline-block' : 'none';
+    clearBtn.textContent = clearText;
+  }
+  if(cancelBtn){
+    cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+    cancelBtn.textContent = cancelText;
+  }
+}
 function openAssign(day, shiftKey){
   modalCtx = {day, shiftKey};
+  setModalActions({showClear:true, showCancel:true});
   const sh = SHIFTS.find(s=>s.key===shiftKey);
   document.getElementById('modalTitle').textContent = `שבץ שוקל — ${sh.label}`;
   document.getElementById('modalSub').textContent = `${day}/${state.month+1}/${state.year} · ${sh.time}`;
@@ -636,6 +774,8 @@ function openAssign(day, shiftKey){
 }
 
 function openSwapModal(day){
+  modalCtx = null;
+  setModalActions({showClear:false, showCancel:true});
   const sched = branch().schedules[monthKey()] || {};
   const dayData = sched[day];
   if(!dayData) {toast('אין משמרות ביום זה'); return;}
@@ -751,6 +891,8 @@ function countConsecutiveWorkDays(sched, targetDay, wid){
 }
 
 function showConsecutiveDaysWarningModal(wid, day, shiftKey, consecutive){
+  modalCtx = null;
+  setModalActions({showClear:false, showCancel:true});
   const worker = branch().workers.find(w => w.id === wid);
   const title = `⚠ הודעה חשובה`;
   const msg = `לשוקל ${worker.name} יש רצף של ${consecutive} ימי עבודה.<br>צריך לתת 36 שעות חופש לאחר 6 ימים.<br><br>בחר אפשרות:`;
@@ -766,9 +908,6 @@ function showConsecutiveDaysWarningModal(wid, day, shiftKey, consecutive){
       </button>
       <button class="btn btn-ghost" style="width:100%" onclick="switchToDouble12('${day}')">
         בחר משמרת 12 שעות (בוקר+לילה)
-      </button>
-      <button class="btn btn-ghost" style="width:100%" onclick="closeModal()">
-        ביטול
       </button>
     </div>
   </div>`;
@@ -790,6 +929,8 @@ function confirmAssignWorker(wid, day, shiftKey){
 
 function switchToBackupWorker(day, shiftKey){
   closeModal();
+  modalCtx = null;
+  setModalActions({showClear:false, showCancel:true});
   const backups = branch().backupWorkers || [];
   if(backups.length === 0){
     toast('אין שוקלים חלופיים. הוסף בצד ימין');
@@ -817,6 +958,8 @@ function assignBackupWorker(backupId, day, shiftKey){
 
 function switchToDouble12(day){
   closeModal();
+  modalCtx = {day, shiftKey:'double12'};
+  setModalActions({showClear:true, clearText:'נקה משמרת 12 שעות', showCancel:true});
   // Show modal to pick morning and night workers
   document.getElementById('modalTitle').textContent = 'בחר שוקלים למשמרת 12 שעות';
   document.getElementById('modalSub').textContent = `בוקר 07:00–15:00 ולילה 23:00–07:00`;
@@ -840,11 +983,17 @@ function switchToDouble12(day){
   });
   
   html += `</div></div>`;
-  html += `<div style="margin-top:12px"><button class="btn btn-ghost" style="width:100%;text-align:right" onclick="closeModal()">ביטול</button></div>`;
   
   document.getElementById('modalOpts').innerHTML = html;
   document.getElementById('modal').classList.add('show');
   window.double12Day = day;
+}
+
+function resetDouble12Picker(){
+  document.getElementById('double12Btn').textContent = 'בחר יום ללוח';
+  document.getElementById('double12Btn').disabled = true;
+  window.selectedDouble12Day = null;
+  window.double12Day = null;
 }
 
 function selectDayForDouble12(day){
@@ -886,9 +1035,7 @@ function selectDouble12Worker(day, shiftType, wid){
     closeModal();
     renderSchedule(); renderLegend(); saveLocal();
     toast('משמרת 12 שעות נשבצה ✓');
-    document.getElementById('double12Btn').textContent = 'בחר יום ללוח';
-    document.getElementById('double12Btn').disabled = true;
-    window.selectedDouble12Day = null;
+    resetDouble12Picker();
   } else {
     toast('בחר שוקל ללילה גם');
   }
@@ -909,23 +1056,125 @@ function clearDouble12(day, shiftType){
 
 
 function clearCell(){
-  if(!modalCtx) return;
-  const {day, shiftKey} = modalCtx;
-  if(branch().schedules[monthKey()]?.[day]) branch().schedules[monthKey()][day][shiftKey]=null;
+  const targetDay = modalCtx?.day ?? window.double12Day ?? window.selectedDouble12Day;
+  const shiftKey = modalCtx?.shiftKey;
+  if(!targetDay) return;
+  if(branch().schedules[monthKey()]?.[targetDay]){
+    if(shiftKey === 'double12' || window.double12Day === targetDay){
+      branch().schedules[monthKey()][targetDay].double12morning = null;
+      branch().schedules[monthKey()][targetDay].double12night = null;
+      resetDouble12Picker();
+    } else {
+      branch().schedules[monthKey()][targetDay][shiftKey] = null;
+    }
+  }
   closeModal(); renderSchedule(); renderLegend(); saveLocal();
 }
-function dragStart(e,id){e.dataTransfer.setData('text/plain',id)}
+function dragStart(e,id){
+  const payload = {type:'worker', wid:id};
+  e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+  e.dataTransfer.effectAllowed = 'copyMove';
+}
+function dragScheduleAssignment(e, day, slot){
+  const wid = branch().schedules[monthKey()]?.[day]?.[slot];
+  if(!wid) return;
+  const payload = {type:'assignment', wid, day, slot};
+  e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+  e.dataTransfer.effectAllowed = 'move';
+}
+function readDragPayload(e){
+  const raw = e.dataTransfer.getData('text/plain');
+  if(!raw) return null;
+  try{
+    const parsed = JSON.parse(raw);
+    if(parsed && parsed.type) return parsed;
+  }catch(err){}
+  return {type:'worker', wid:raw};
+}
+function getDropHalfByPointer(e){
+  const rect = e.currentTarget.getBoundingClientRect();
+  const offsetX = e.clientX - rect.left;
+  return offsetX < rect.width / 2 ? 'left' : 'right';
+}
+function ensureScheduleDay(day){
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {};
+  return sched[day];
+}
+function getSlotValue(day, slot){
+  return branch().schedules[monthKey()]?.[day]?.[slot] || null;
+}
+function setSlotValue(day, slot, value){
+  const dayData = ensureScheduleDay(day);
+  dayData[slot] = value || null;
+}
+function moveOrSwapAssignment(source, day, targetSlot){
+  if(!source || source.type !== 'assignment') return false;
+  if(source.day === day && source.slot === targetSlot) return false;
+  const sourceValue = getSlotValue(source.day, source.slot);
+  if(!sourceValue) return false;
+  const targetValue = getSlotValue(day, targetSlot);
+  setSlotValue(day, targetSlot, sourceValue);
+  if(targetValue){
+    setSlotValue(source.day, source.slot, targetValue);
+  } else {
+    setSlotValue(source.day, source.slot, null);
+  }
+  return true;
+}
+function resolveDropTargetSlot(e, day, shiftKey, payload){
+  const dayData = branch().schedules[monthKey()]?.[day] || {};
+  if(shiftKey !== 'afternoon' || payload?.type !== 'assignment' || dayData.afternoon) return shiftKey;
+  if(payload.day !== day) return shiftKey;
+  const half = getDropHalfByPointer(e);
+  if((payload.slot === 'morning' || payload.slot === 'double12morning') && half === 'right') return 'double12morning';
+  if((payload.slot === 'night' || payload.slot === 'double12night') && half === 'left') return 'double12night';
+  return shiftKey;
+}
 function dropOn(e,day,shiftKey){
-  const wid = e.dataTransfer.getData('text/plain');
+  const payload = readDragPayload(e);
+  if(!payload) return;
   const sched = branch().schedules[monthKey()];
   sched[day] = sched[day] || {}; 
-  
-  // Check for 6+ consecutive work days before assigning
+  const targetSlot = resolveDropTargetSlot(e, day, shiftKey, payload);
+
+  if(payload.type === 'assignment'){
+    if(moveOrSwapAssignment(payload, day, targetSlot)){
+      renderSchedule(); renderLegend(); saveLocal();
+    }
+    return;
+  }
+
+  const wid = payload.wid;
   const consecutive = countConsecutiveWorkDays(sched, day, wid);
   if(consecutive >= 6){
-    showConsecutiveDaysWarningModal(wid, day, shiftKey, consecutive);
+    showConsecutiveDaysWarningModal(wid, day, targetSlot, consecutive);
   } else {
-    sched[day][shiftKey] = wid;
+    sched[day][targetSlot] = wid;
+    renderSchedule(); renderLegend(); saveLocal();
+  }
+}
+function dropOnHalf(e, day, targetSlot){
+  e.preventDefault();
+  e.stopPropagation();
+  const payload = readDragPayload(e);
+  if(!payload) return;
+  const sched = branch().schedules[monthKey()];
+  sched[day] = sched[day] || {};
+
+  if(payload.type === 'assignment'){
+    if(moveOrSwapAssignment(payload, day, targetSlot)){
+      renderSchedule(); renderLegend(); saveLocal();
+    }
+    return;
+  }
+
+  const wid = payload.wid;
+  const consecutive = countConsecutiveWorkDays(sched, day, wid);
+  if(consecutive >= 6){
+    showConsecutiveDaysWarningModal(wid, day, targetSlot, consecutive);
+  } else {
+    sched[day][targetSlot] = wid;
     renderSchedule(); renderLegend(); saveLocal();
   }
 }
@@ -949,37 +1198,39 @@ function autoFill(){
   const sched = branch().schedules[monthKey()] = branch().schedules[monthKey()] || {};
   const dim = daysInMonth();
   const order = ['morning','afternoon','night'];
-  // Take week 1 as baseline; for each worker find shift they did in week1
-  const baseline = {}; // workerId -> shiftKey
-  for(let d=1; d<=7; d++){
-    const day = sched[d]; if(!day) continue;
-    for(const s of SHIFTS){
-      if(day[s.key] && !baseline[day[s.key]]) baseline[day[s.key]] = s.key;
-    }
-  }
-  if(Object.keys(baseline).length===0){toast('שבץ קודם את שבוע 1');return}
+  const hasAnyAssignment = dayData => !!(dayData && (dayData.morning || dayData.afternoon || dayData.night || dayData.double12morning || dayData.double12night));
 
-  // For each worker, we need to know which DAY of the week they work, then rotate by week
-  const workerDayInWeek = {}; // workerId -> [day-of-week indexes 0..6 (Sun..Sat)]
-  for(let d=1; d<=7; d++){
-    const day = sched[d]; if(!day) continue;
-    const dow = new Date(state.year, state.month, d).getDay();
-    for(const s of SHIFTS){
-      const wid = day[s.key]; if(!wid) continue;
-      workerDayInWeek[wid] = workerDayInWeek[wid]||[];
-      if(!workerDayInWeek[wid].includes(dow)) workerDayInWeek[wid].push(dow);
-    }
-  }
+  let seedStart = 1;
+  while(seedStart <= dim && !hasAnyAssignment(sched[seedStart])) seedStart++;
+  if(seedStart > dim){toast('שבץ קודם לפחות יום אחד');return}
 
-  for(let d=8; d<=dim; d++){
-    const dow = new Date(state.year, state.month, d).getDay();
-    const weekOffset = Math.floor((d-1)/7); // 0..n
-    sched[d] = sched[d] || {};
-    for(const wid in baseline){
-      if(!workerDayInWeek[wid] || !workerDayInWeek[wid].includes(dow)) continue;
-      const baseIdx = order.indexOf(baseline[wid]);
-      const shiftKey = order[(baseIdx + weekOffset) % 3];
-      sched[d][shiftKey] = wid;
+  let seedEnd = seedStart;
+  while(seedEnd + 1 <= dim && seedEnd - seedStart + 1 < 7 && hasAnyAssignment(sched[seedEnd + 1])) seedEnd++;
+  const seedLength = seedEnd - seedStart + 1;
+
+  for(let d=seedEnd + 1; d<=dim; d++){
+    const sourceDayIndex = seedStart + ((d - seedStart) % seedLength);
+    const cycleOffset = Math.floor((d - seedStart) / seedLength);
+    const sourceDay = sched[sourceDayIndex] || {};
+    const preservedNotes = sched[d]?.notes || '';
+    const preservedDouble12Morning = sched[d]?.double12morning || null;
+    const preservedDouble12Night = sched[d]?.double12night || null;
+
+    sched[d] = {
+      notes: preservedNotes,
+      morning:null,
+      afternoon:null,
+      night:null,
+      double12morning: preservedDouble12Morning,
+      double12night: preservedDouble12Night
+    };
+
+    for(const shiftKey of order){
+      const wid = sourceDay[shiftKey];
+      if(!wid) continue;
+      const baseIdx = order.indexOf(shiftKey);
+      const targetShiftKey = order[(baseIdx + cycleOffset) % order.length];
+      sched[d][targetShiftKey] = wid;
     }
   }
   renderSchedule(); renderLegend(); saveLocal();
@@ -1079,37 +1330,12 @@ function delRow(tabId,si,ri){
    EXPORT / SHARE
 ============================================================ */
 function exportExcel(){
-  const wb = XLSX.utils.book_new();
   const tab = state.tabs.find(t=>t.id===state.currentTab);
   if(tab.type==='schedule'){
-    const dim = daysInMonth();
-    const sched = branch().schedules[monthKey()] || {};
-    const rows = [['תאריך','יום','בוקר 07-15','צהריים 15-23','לילה 23-07','הערות','12h בוקר','12h לילה']];
-    for(let d=1; d<=dim; d++){
-      const day = sched[d] || {};
-      const nm = id => {
-        if(!id) return '';
-        if(id.startsWith('backup_')){
-          const backupId = id.replace('backup_', '');
-          return branch().backupWorkers.find(b => b.id === backupId)?.name || 'שוקל חלופי';
-        }
-        return branch().workers.find(w=>w.id===id)?.name||'';
-      };
-      const dow = DAYS_HE[new Date(state.year,state.month,d).getDay()];
-      rows.push([
-        `${d}/${state.month+1}/${state.year}`, 
-        dow, 
-        nm(day.morning), 
-        nm(day.afternoon), 
-        nm(day.night),
-        day.notes || '',
-        nm(day.double12morning),
-        nm(day.double12night)
-      ]);
-    }
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, `סידור ${MONTHS_HE[state.month]}`);
+    exportScheduleExcelWithColors(tab);
+    return;
   } else {
+    const wb = XLSX.utils.book_new();
     const data = getTabData(tab.id);
     data.sections.forEach((s,i)=>{
       const aoa = [[s.title],[''], s.headers, ...s.rows];
@@ -1119,6 +1345,88 @@ function exportExcel(){
   }
   XLSX.writeFile(wb, `${tab.name}_${branch().name}_${MONTHS_HE[state.month]}_${state.year}.xlsx`);
   toast('הקובץ הורד ✓');
+}
+
+function escapeHtml(value){
+  return String(value ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function workerNameFromId(id){
+  return getWorkerDisplayInfo(id)?.name || '';
+}
+
+function workerColorFromId(id){
+  return getWorkerDisplayInfo(id)?.color || '#FFFFFF';
+}
+
+function downloadBlobFile(filename, blob){
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(()=>URL.revokeObjectURL(link.href), 1500);
+}
+
+function exportScheduleExcelWithColors(tab){
+  const dim = daysInMonth();
+  const sched = branch().schedules[monthKey()] || {};
+  let html = `
+    <html lang="he" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body{font-family:Arial,sans-serif;direction:rtl}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #BFBFBF;padding:8px;text-align:center;vertical-align:middle}
+        th{background:#1C1C1A;color:#FFFFFF;font-weight:bold}
+        td.date{background:#F5F5F3;font-weight:bold}
+        td.notes{text-align:right}
+      </style>
+    </head>
+    <body>
+      <table>
+        <tr>
+          <th>תאריך</th>
+          <th>יום</th>
+          <th>בוקר 07-15</th>
+          <th>צהריים 15-23</th>
+          <th>לילה 23-07</th>
+          <th>הערות</th>
+          <th>12h בוקר</th>
+          <th>12h לילה</th>
+        </tr>`;
+
+  for(let d=1; d<=dim; d++){
+    const day = sched[d] || {};
+    const dow = DAYS_HE[new Date(state.year,state.month,d).getDay()];
+    html += `
+      <tr>
+        <td class="date">${escapeHtml(`${d}/${state.month+1}/${state.year}`)}</td>
+        <td class="date">${escapeHtml(dow)}</td>
+        <td style="background:${workerColorFromId(day.morning)}">${escapeHtml(workerNameFromId(day.morning))}</td>
+        <td style="background:${workerColorFromId(day.afternoon)}">${escapeHtml(workerNameFromId(day.afternoon))}</td>
+        <td style="background:${workerColorFromId(day.night)}">${escapeHtml(workerNameFromId(day.night))}</td>
+        <td class="notes">${escapeHtml(day.notes || '')}</td>
+        <td style="background:${workerColorFromId(day.double12morning)}">${escapeHtml(workerNameFromId(day.double12morning))}</td>
+        <td style="background:${workerColorFromId(day.double12night)}">${escapeHtml(workerNameFromId(day.double12night))}</td>
+      </tr>`;
+  }
+
+  html += `
+      </table>
+    </body>
+    </html>`;
+
+  const blob = new Blob(['\ufeff', html], {type:'application/vnd.ms-excel;charset=utf-8;'});
+  downloadBlobFile(`${tab.name}_${branch().name}_${MONTHS_HE[state.month]}_${state.year}.xls`, blob);
+  toast('קובץ האקסל עם הצבעים הורד ✓');
 }
 
 function buildTextSummary(){
@@ -1150,10 +1458,37 @@ function shareWhatsApp(){
   const url = `https://wa.me/?text=${encodeURIComponent(buildTextSummary())}`;
   window.open(url,'_blank');
 }
-function shareEmail(){
-  const subj = encodeURIComponent(`סידור עבודה - ${MONTHS_HE[state.month]} ${state.year}`);
-  const body = encodeURIComponent(buildTextSummary());
-  window.location.href = `mailto:?subject=${subj}&body=${body}`;
+async function shareEmail(){
+  const title = `סידור עבודה - ${MONTHS_HE[state.month]} ${state.year}`;
+  const text = buildTextSummary();
+  if(navigator.share){
+    try{
+      await navigator.share({title, text});
+      return;
+    }catch(e){
+      if(e && e.name === 'AbortError') return;
+    }
+  }
+
+  const subj = encodeURIComponent(title);
+  const body = encodeURIComponent(text);
+  const href = `mailto:?subject=${subj}&body=${body}`;
+  try{
+    const link = document.createElement('a');
+    link.href = href;
+    link.target = '_self';
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }catch(e){}
+  try{
+    window.location.assign(href);
+  }catch(e){
+    window.location.href = href;
+  }
 }
 function reminderWA(){
   const msg = prompt('תוכן התזכורת:', `תזכורת: משמרת היום בשער ${branch().name}`);
